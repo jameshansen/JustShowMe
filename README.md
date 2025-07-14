@@ -19,11 +19,18 @@ To relay the processed video to another application, a virtual "JustShowMe Cam" 
 
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 
-As I am a Software Developer and Public Policy student, this project was an experiment to create an example of how AI can be used to address ethical considerations in a positive way. Unlike surveillance-oriented applications, this project demonstrates algorithmic accountability. The architecture embodies privacy-by-design principles through local processing.
+As I am a Software Developer and Public Policy student, this project was an experiment to create an example of how AI can be used to address ethical considerations in a positive way.
 
-There is a clear consent mechanism, and the face detection process is clear with the source code available here. This project aligns with emerging AI governance frameworks like the EU AI Act's requirements for high-risk AI systems.
+The focus of this project basically boils down to "consent."
 
-From a technology policy perspective, this represents a model for how AI tools can enhance individual agency rather than diminish it. Beyond corporate and social use, it also could enhance democratic participation in digital spaces while maintaining human dignity and privacy rights.
+Ethics and consent has been a hot-button topic in many AI-based platforms and projects, whether it is:
+* consenting to your data being collected and used in facial recognition systems
+* whether work rights-holders have published being used to train models.
+* to even whether residents want an "AI Datacentre" in their town or city.
+
+This project grapples with the ethics surrounding AI-tools. The app does store facial recognition data, it is retained and processed locally, and has the objective of a consent-positive effect, automatically excluding people from video who did not consent to being filmed.
+
+Does this neutralize the ethical implications? I think in this case, it balances out.
 
 As policymakers worldwide grapple with regulating AI systems I hope this project, in a very small way, demonstrates that privacy-preserving, user-controlled AI applications are not only possible but essential for maintaining public trust in emerging technologies.
 
