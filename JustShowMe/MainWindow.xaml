@@ -1,0 +1,187 @@
+﻿<Window x:Class="JustShowMe.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JustShowMe - Privacy Webcam Filter" 
+        Height="600" Width="900" 
+        Background="#2B2B2B">
+
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left Panel -->
+        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+            <!-- Top Controls -->
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Webcam Selection -->
+                <ComboBox Name="WebcamDropdown" 
+                          Grid.Column="0"
+                          ItemsSource="{Binding AvailableWebcams}"
+                          DisplayMemberPath="Name"
+                          SelectedIndex="0"
+                          SelectionChanged="WebcamDropdown_SelectionChanged"
+                          Padding="5"
+                          Margin="0,0,10,0"/>
+
+                <!-- Settings Button -->
+                <Button Grid.Column="1" 
+                        Content="⚙"
+                        Width="30" 
+                        Height="30"
+                        Margin="0,0,10,0"
+                        ToolTip="Settings"/>
+
+                <!-- Start/Stop Camera Button -->
+                <Button Name="StartStopButton"
+                        Grid.Column="2" 
+                        Content="▶ Start Camera"
+                        Padding="10,5"
+                        Click="StartCapture_Click"
+                        Background="#4CAF50"
+                        Foreground="White"
+                        BorderBrush="Transparent"/>
+            </Grid>
+
+            <!-- Video Preview -->
+            <Border BorderBrush="Gray" 
+                    BorderThickness="2" 
+                    Background="Black"
+                    MinHeight="300">
+                <Grid>
+                    <!-- Camera Preview -->
+                    <Image Name="CameraPreview"
+                           Source="{Binding PreviewImage}" 
+                           Stretch="Uniform"/>
+
+                    <!-- No Camera Message -->
+                    <TextBlock Name="NoCameraMessage"
+                              Text="Select a camera and click 'Start Camera'"
+                              Foreground="White"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              FontSize="14"
+                              Visibility="Visible"/>
+                </Grid>
+            </Border>
+
+            <!-- Virtual Webcam Control -->
+            <CheckBox Name="VirtualWebcamCheckbox"
+                      Content="✓ Enable Virtual Webcam &quot;JustShowMeCam&quot;"
+                      IsChecked="{Binding EnableVirtualWebcam}"
+                      Foreground="White"
+                      Margin="0,10,0,0"
+                      Checked="VirtualWebcam_Checked"
+                      Unchecked="VirtualWebcam_Unchecked"/>
+        </StackPanel>
+
+        <!-- Right Panel - Filters -->
+        <Border Grid.Column="1" 
+                BorderBrush="Gray" 
+                BorderThickness="1" 
+                Background="#3C3C3C"
+                Padding="10">
+            <StackPanel>
+                <TextBlock Text="Filters" 
+                          FontWeight="Bold" 
+                          FontSize="14" 
+                          Foreground="White"
+                          Margin="0,0,0,10"/>
+
+                <!-- Filter Options -->
+                <RadioButton Name="BlurAllFacesRadio"
+                            Content="Blur All Faces"
+                            Foreground="White"
+                            GroupName="FilterMode"
+                            Margin="0,0,0,5"
+                            Checked="FilterMode_Changed"/>
+
+                <RadioButton Name="BlurFacesNotInListRadio"
+                            Content="Blur Faces not in list:"
+                            Foreground="White"
+                            GroupName="FilterMode"
+                            IsChecked="True"
+                            Margin="0,0,0,10"
+                            Checked="FilterMode_Changed"/>
+
+                <!-- Allowed Faces List -->
+                <ListBox ItemsSource="{Binding AllowedFaces}" 
+                         Background="#4A4A4A"
+                         BorderBrush="Gray"
+                         MaxHeight="200"
+                         MinHeight="100"
+                         Margin="0,0,0,10">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Ellipse Grid.Column="0" 
+                                        Width="40" Height="40" 
+                                        Fill="Orange"
+                                        Margin="0,0,10,0"/>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" 
+                                              FontWeight="Bold" 
+                                              Foreground="White"/>
+                                    <TextBlock Text="{Binding StatusText}" 
+                                              FontSize="10" 
+                                              Foreground="LightGray"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="2" 
+                                       Content="⋯" 
+                                       Width="30" 
+                                       Height="25"
+                                       Click="FaceOptions_Click"
+                                       Background="Transparent"
+                                       Foreground="White"
+                                       BorderBrush="Gray"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Add Face Button -->
+                <Button Content="+ Add Face" 
+                        Padding="10,5" 
+                        Click="AddFace_Click"
+                        Background="#5A5A5A"
+                        Foreground="White"
+                        BorderBrush="Gray"
+                        Margin="0,0,0,20"/>
+
+                <!-- Status Info -->
+                <StackPanel>
+                    <TextBlock Text="Status:" 
+                              FontWeight="Bold" 
+                              Foreground="White"
+                              Margin="0,0,0,5"/>
+
+                    <TextBlock Name="StatusText"
+                              Text="Camera stopped"
+                              Foreground="LightGray"
+                              FontSize="12"
+                              Margin="0,0,0,10"/>
+
+                    <TextBlock Name="FaceCountText"
+                              Text="Faces detected: 0"
+                              Foreground="LightGray"
+                              FontSize="12"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
