@@ -1,5 +1,6 @@
 # JustShowMe
 Webcam Privacy Filter
+<img width="1549" height="1037" alt="image" src="https://github.com/user-attachments/assets/49395be6-acf0-4a38-9b5c-e959fc9add67" />
 
 ## Concept
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
