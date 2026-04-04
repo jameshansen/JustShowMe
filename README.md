@@ -9,7 +9,7 @@ From an ethics and technology policy standpoint, this creates a problem, as peop
 
 While blurring the entire background is an option, this can sometimes create strange effects make your video feed less visually appealing.
 
-"JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decord, or cool coffee shop you happen to be at, without impacting individuals privacy.
+"JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals privacy.
 
 ## Implementation
 
