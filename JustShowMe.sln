@@ -7,11 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "justshowme_filter", "justsh
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "justshowme_gui", "justshowme_gui\justshowme_gui.csproj", "{B1F1A002-0002-4A02-9F02-000000000002}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "softcam", "justshowme_cam\softcam\softcam.vcxproj", "{52968D29-AA5F-41A4-BF1E-4C50F1098373}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "justshowme_cam", "justshowme_cam\softcam\softcam.vcxproj", "{52968D29-AA5F-41A4-BF1E-4C50F1098373}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "softcam_baseclasses", "justshowme_cam\softcam_baseclasses\softcam_baseclasses.vcxproj", "{E8A3F6FA-AE1C-4C8E-A0B6-9C8480324EAA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "justshowme_cam_baseclasses", "justshowme_cam\softcam_baseclasses\softcam_baseclasses.vcxproj", "{E8A3F6FA-AE1C-4C8E-A0B6-9C8480324EAA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "softcam_core", "justshowme_cam\softcam_core\softcam_core.vcxproj", "{DF9D5A2D-3BED-4D1A-8484-22A654C9AD76}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "justshowme_cam_core", "justshowme_cam\softcam_core\softcam_core.vcxproj", "{DF9D5A2D-3BED-4D1A-8484-22A654C9AD76}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

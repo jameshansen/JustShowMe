@@ -18,9 +18,25 @@ The project is a Visual Studio solution split into three components:
 
 1. **`justshowme_cam`** (C++) — the **JustShowMe Virtual Webcam** DirectShow driver. Once registered it always appears in the camera list of any app (Zoom, Teams, browsers) and serves frames out of a shared-memory buffer. Forked from https://github.com/tshino/softcam (MIT Licensed).
 2. **`justshowme_gui`** (C#/WPF) — the configuration GUI and the frame pump. While running it opens the configured real webcam, runs the filter on every frame, and pushes the result into the virtual camera. It shows a live **Before/After** preview inline and manages driver install/registration. The GUI must be running for filtering to happen.
-3. **`justshowme_filter`** (C# DLL) — the swappable AI filter. The default implementation does Haar-cascade face detection (OpenCV) + selective Gaussian blur. The GUI loads whichever DLL the user configures; the default is the `justshowme_filter.dll` beside the GUI exe.
+3. **`justshowme_filter`** (C# DLL) — the swappable AI filter. The default implementation does **any-angle face detection (YuNet)**, cross-frame tracking, and selective Gaussian blur. The GUI loads whichever DLL the user configures; the default is the `justshowme_filter.dll` beside the GUI exe.
 
 Settings and the filter DLL path are stored in `%ProgramData%\JustShowMe\settings.ini` so every JustShowMe process reads the same config.
+
+### Face detection (the filter)
+
+Earlier versions used a single Haar cascade, which only detects forward-facing faces — turn your head and the blur fell off. The filter now detects faces at any angle (profiles, tilts, look-down) using **YuNet**, a small, fast DNN face detector, and is organised into focused classes for clarity:
+
+| Class | Role |
+|---|---|
+| `IFaceDetector` | Common detector interface (`Detect(Mat) → boxes`). |
+| `YuNetFaceDetector` | **The YuNet wrapper/decoder.** Loads `face_detection_yunet_2023mar.onnx` via OpenCV's DNN module and decodes its raw outputs. |
+| `HaarFaceDetector` | Frontal-only fallback used when the ONNX model is missing. |
+| `FaceTracker` | Lightweight IoU tracker — stable face ids + keeps a face blurred for a few frames after detection drops, so a turning head doesn't flash clear. |
+| `BlurFaceFilter` | The `IFrameFilter`: detect → track → pad boxes ~15% → Gaussian blur per mode. |
+
+**Why a hand-written YuNet decoder?** OpenCvSharp 4.11 doesn't ship the high-level `cv::FaceDetectorYN` wrapper, so `YuNetFaceDetector` reproduces its post-processing itself: per-stride priors (8/16/32), `score = sqrt(cls · obj)`, box decode, and non-max suppression. This keeps us on the OpenCvSharp DNN module we already have — no extra dependency.
+
+The model file `face_detection_yunet_2023mar.onnx` (~230 KB) is bundled next to the filter DLL (from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo)). If it's absent the filter automatically falls back to the Haar cascade (frontal only).
 
 ### Building
 
@@ -54,6 +70,8 @@ As policymakers worldwide grapple with regulating AI systems I hope this project
 
 ## Special Thanks
 TheDigitalArtist at Pixabay for the [User Icon Graphic](https://pixabay.com/vectors/icon-user-person-preference-choice-9798054/) that forms part of the application icon design.
+
+The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) face-detection model (Shiqi Yu et al.), distributed via the OpenCV Zoo, used for any-angle face detection.
 
 ## License
 
