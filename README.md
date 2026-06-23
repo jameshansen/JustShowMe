@@ -12,6 +12,8 @@ While blurring the entire background is an option, this can sometimes create str
 
 "JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals privacy.
 
+<img width="1006" height="633" alt="justshowme_gui_LvRVK6l0sH" src="https://github.com/user-attachments/assets/b5351e58-bc1a-4f21-b69b-917b07737010" />
+
 ## Implementation
 
 The project is a Visual Studio solution split into three components:
