@@ -30,13 +30,12 @@ Earlier versions used a single Haar cascade, which only detects forward-facing f
 |---|---|
 | `IFaceDetector` | Common detector interface (`Detect(Mat) → boxes`). |
 | `YuNetFaceDetector` | **The YuNet wrapper/decoder.** Loads `face_detection_yunet_2023mar.onnx` via OpenCV's DNN module and decodes its raw outputs. |
-| `HaarFaceDetector` | Frontal-only fallback used when the ONNX model is missing. |
 | `FaceTracker` | Lightweight IoU tracker — stable face ids + keeps a face blurred for a few frames after detection drops, so a turning head doesn't flash clear. |
 | `BlurFaceFilter` | The `IFrameFilter`: detect → track → pad boxes ~15% → Gaussian blur per mode. |
 
 **Why a hand-written YuNet decoder?** OpenCvSharp 4.11 doesn't ship the high-level `cv::FaceDetectorYN` wrapper, so `YuNetFaceDetector` reproduces its post-processing itself: per-stride priors (8/16/32), `score = sqrt(cls · obj)`, box decode, and non-max suppression. This keeps us on the OpenCvSharp DNN module we already have — no extra dependency.
 
-The model file `face_detection_yunet_2023mar.onnx` (~230 KB) is bundled next to the filter DLL (from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo)). If it's absent the filter automatically falls back to the Haar cascade (frontal only).
+The model file `face_detection_yunet_2023mar.onnx` (~230 KB) is bundled next to the filter DLL (from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo)) and is required — the filter reports a clear error if it's missing.
 
 ### Building
 

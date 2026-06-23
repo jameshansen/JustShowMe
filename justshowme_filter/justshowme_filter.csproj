@@ -53,7 +53,6 @@
     <Compile Include="IFrameFilter.cs" />
     <Compile Include="IFaceDetector.cs" />
     <Compile Include="YuNetFaceDetector.cs" />
-    <Compile Include="HaarFaceDetector.cs" />
     <Compile Include="FaceTracker.cs" />
     <Compile Include="BlurFaceFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,9 +62,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="face_detection_yunet_2023mar.onnx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="haarcascade_frontalface_alt.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <!-- OpenCvSharp native libs placed directly beside the exe (x64 only).
