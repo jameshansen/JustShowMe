@@ -1,5 +1,5 @@
 # JustShowMe
-<img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/6a0257fa-5a05-4b1c-8292-2cc6b7ba20e6" />
+<img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
 
 Webcam Privacy Filter
 
@@ -58,6 +58,9 @@ This project grapples with the ethics surrounding AI-tools. The app does store f
 Does this neutralize the ethical implications? I think in this case, it balances out.
 
 As policymakers worldwide grapple with regulating AI systems I hope this project, in a very small way, demonstrates that privacy-preserving, user-controlled AI applications are not only possible but essential for maintaining public trust in emerging technologies.
+
+## Special Thanks
+TheDigitalArtist at Pixabay for the [User Icon Graphic](https://pixabay.com/vectors/icon-user-person-preference-choice-9798054/) that forms part of the application icon design.
 
 ## License
 
