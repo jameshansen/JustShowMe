@@ -1,6 +1,7 @@
 # JustShowMe
+<img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
+
 Webcam Privacy Filter
-<img width="1549" height="1037" alt="image" src="https://github.com/user-attachments/assets/49395be6-acf0-4a38-9b5c-e959fc9add67" />
 
 ## Concept
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
@@ -58,6 +59,9 @@ Does this neutralize the ethical implications? I think in this case, it balances
 
 As policymakers worldwide grapple with regulating AI systems I hope this project, in a very small way, demonstrates that privacy-preserving, user-controlled AI applications are not only possible but essential for maintaining public trust in emerging technologies.
 
+## Special Thanks
+TheDigitalArtist at Pixabay for the [User Icon Graphic](https://pixabay.com/vectors/icon-user-person-preference-choice-9798054/) that forms part of the application icon design.
+
 ## License
 
-This project is licensed under Apache License v2.0
+This project is licensed under GPL v3
