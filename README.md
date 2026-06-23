@@ -48,14 +48,7 @@ As I am a Software Developer and hold an MA in Public Policy, this project was a
 
 The focus of this project basically boils down to "consent."
 
-Ethics and consent has been a hot-button topic in many AI-based platforms and projects, whether it is:
-* consenting to your data being collected and used in facial recognition systems
-* whether work rights-holders have published being used to train models.
-* to even whether residents want an "AI Datacentre" in their town or city.
-
-This project grapples with the ethics surrounding AI-tools. The app does store facial recognition data, it is retained and processed locally, and has the objective of a consent-positive effect, automatically excluding people from video who did not consent to being filmed.
-
-Does this neutralize the ethical implications? I think in this case, it balances out.
+While the app does store facial recognition data, it is retained and processed locally, and has the objective of a consent-positive effect, automatically excluding people from video who did not consent to being filmed.
 
 As policymakers worldwide grapple with regulating AI systems I hope this project, in a very small way, demonstrates that privacy-preserving, user-controlled AI applications are not only possible but essential for maintaining public trust in emerging technologies.
 
