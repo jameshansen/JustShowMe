@@ -58,6 +58,22 @@ All three projects output to a single `Debug\` (or `Release\`) folder in the rep
 
 > **Note:** the driver is an in-process COM DLL, so it can't be overwritten while any app has the virtual camera loaded. If a rebuild fails with `LNK1168: cannot open justshowme_cam.dll for writing`, close apps that use the camera (Zoom, Chrome, Teams, the Camera app) and build again.
 
+### Releasing
+
+To produce a clean, distributable build for a GitHub release:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build-release.ps1
+```
+
+This script:
+
+- **Builds Release|x64.** In Release, [Costura.Fody](https://github.com/Fody/Costura) embeds the managed dependencies (OpenCvSharp, WpfExtensions, System.*) directly into `justshowme_gui.exe`, so the release isn't littered with loose DLLs. Costura runs in **Release only** — Debug builds stay loose for fast iteration. `justshowme_filter.dll` is deliberately *excluded* from embedding so it remains a swappable file the GUI loads by path (it still resolves OpenCvSharp from the exe's embedded copy at runtime).
+- **Stamps a build number.** A counter in `build.number` (starting at `0005`) is written into `BuildInfo.cs`, so the window title bar reads e.g. `JustShowMe - Privacy Webcam Filter - Build 0005`. The counter auto-increments after each release.
+- **Stages only what's needed** (the exe, the driver and filter DLLs, the YuNet model, the cascade, the native OpenCvSharp DLLs, and the LICENSE) and zips them to `justshowme_build<NNNN>.zip` in the repo root, ready to attach to a GitHub release.
+
+Native DLLs (`OpenCvSharpExtern.dll`, the ffmpeg DLL) can't be embedded, so they ship as files directly beside the exe (Windows always searches the exe's own folder, so no `dll\x64\` subfolder is needed).
+
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 
 As I am a Software Developer and hold an MA in Public Policy, this project was an experiment to create an example of how AI can be used to address ethical considerations in a positive way.

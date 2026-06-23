@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <!-- Embeds copy-local managed dependencies (OpenCvSharp, WpfExtensions, System.*)
+       into justshowme_gui.exe so a Release build ships clean. justshowme_filter is
+       excluded so it stays a loose, swappable file that the GUI loads by path; the
+       filter still resolves OpenCvSharp at runtime via the GUI's embedded copy. -->
+  <Costura>
+    <ExcludeAssemblies>
+justshowme_filter
+    </ExcludeAssemblies>
+  </Costura>
+</Weavers>

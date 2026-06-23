@@ -23,6 +23,7 @@ namespace JustShowMe
         public MainWindow()
         {
             InitializeComponent();
+            Title = $"JustShowMe - Privacy Webcam Filter - Build {BuildInfo.Number}";
             DataContext = this;
             _config = Config.Load();
             _selectedCamera = _config.CameraIndex;

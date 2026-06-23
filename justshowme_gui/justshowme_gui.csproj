@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\build\net48\OpenCvSharp4.runtime.win.props" Condition="Exists('..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\build\net48\OpenCvSharp4.runtime.win.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <!-- Costura embeds managed deps into the exe. Release only, so Debug stays loose for fast iteration. -->
+  <Import Project="..\packages\Costura.Fody.3.3.3\build\Costura.Fody.props" Condition="'$(Configuration)' == 'Release' And Exists('..\packages\Costura.Fody.3.3.3\build\Costura.Fody.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -13,7 +14,9 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <WarningLevel>4</WarningLevel>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <!-- No app.config needed: no binding redirects required, and Costura resolves
+         embedded managed deps at runtime. -->
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -96,6 +99,7 @@
     <Compile Include="SelectFaceDialog.xaml.cs">
       <DependentUpon>SelectFaceDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="BuildInfo.cs" />
     <Compile Include="CameraEnumerator.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Config.cs" />
@@ -107,8 +111,20 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="FodyWeavers.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- OpenCvSharp native libs placed directly beside the exe (x64 only).
+         Replaces OpenCvSharp4.runtime.win.props, which forces a dll\x64\ subfolder. -->
+    <Content Include="..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\runtimes\win-x64\native\OpenCvSharpExtern.dll">
+      <Link>OpenCvSharpExtern.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\runtimes\win-x64\native\opencv_videoio_ffmpeg4110_64.dll">
+      <Link>opencv_videoio_ffmpeg4110_64.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\justshowme_filter\justshowme_filter.csproj">
@@ -120,10 +136,6 @@
     <Resource Include="icon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\build\net48\OpenCvSharp4.runtime.win.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\OpenCvSharp4.runtime.win.4.11.0.20250507\build\net48\OpenCvSharp4.runtime.win.props'))" />
-  </Target>
+  <!-- Fody/Costura weaving runs after compile, Release only. -->
+  <Import Project="..\packages\Fody.4.2.1\build\Fody.targets" Condition="'$(Configuration)' == 'Release' And Exists('..\packages\Fody.4.2.1\build\Fody.targets')" />
 </Project>
