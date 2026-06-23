@@ -1,0 +1,13 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+Win32/
+dist/
+
+# Visual Studio
+.vs/
+*.user
+*.suo

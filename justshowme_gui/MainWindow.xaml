@@ -1,0 +1,121 @@
+<Window x:Class="JustShowMe.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JustShowMe - Privacy Webcam Filter"
+        Height="640" Width="1020" Background="#2B2B2B">
+
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: camera + preview -->
+        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ComboBox Name="WebcamDropdown" Grid.Column="0"
+                          ItemsSource="{Binding AvailableWebcams}" DisplayMemberPath="Name"
+                          SelectionChanged="WebcamDropdown_SelectionChanged"
+                          Padding="5" Margin="0,0,10,0"/>
+                <Button Name="StartStopButton" Grid.Column="1" Content="▶ Start"
+                        Padding="14,5" Click="StartStop_Click"
+                        Background="#4CAF50" Foreground="White" BorderBrush="Transparent"/>
+            </Grid>
+
+            <Grid MinHeight="340">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                    <TextBlock Text="Before" Foreground="White" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <Border BorderBrush="Gray" BorderThickness="2" Background="Black" MinHeight="300">
+                        <Image Name="BeforePreview" Stretch="Uniform"/>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                    <TextBlock Text="After (sent to virtual camera)" Foreground="White"
+                               HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <Border BorderBrush="Gray" BorderThickness="2" Background="Black" MinHeight="300">
+                        <Grid>
+                            <Image Name="AfterPreview" Stretch="Uniform"/>
+                            <TextBlock Name="NoCameraMessage"
+                                       Text="Select a camera and click Start"
+                                       Foreground="White" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" FontSize="13"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <TextBlock Name="StatusText" Text="Stopped" Foreground="LightGray"
+                       FontSize="12" Margin="2,8,0,0"/>
+            <TextBlock Name="FaceCountText" Text="Faces detected: 0" Foreground="LightGray"
+                       FontSize="12" Margin="2,2,0,0"/>
+        </StackPanel>
+
+        <!-- Right: filters + driver + preview -->
+        <Border Grid.Column="1" BorderBrush="Gray" BorderThickness="1"
+                Background="#3C3C3C" Padding="10">
+            <StackPanel>
+                <TextBlock Text="Filters" FontWeight="Bold" FontSize="14"
+                           Foreground="White" Margin="0,0,0,10"/>
+
+                <RadioButton Name="BlurAllRadio" Content="Blur all faces" Foreground="White"
+                             GroupName="FilterMode" Margin="0,0,0,5" Checked="FilterMode_Changed"/>
+                <RadioButton Name="BlurNotAllowedRadio" Content="Blur faces not in list:"
+                             Foreground="White" GroupName="FilterMode" IsChecked="True"
+                             Margin="0,0,0,8" Checked="FilterMode_Changed"/>
+
+                <ListBox ItemsSource="{Binding AllowedFaces}" Background="#4A4A4A"
+                         BorderBrush="Gray" MaxHeight="180" MinHeight="90" Margin="0,0,0,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0" Width="40" Height="40"
+                                       Source="{Binding FaceImage}" Margin="0,0,10,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="LightGray"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="⋯" Width="30" Height="25"
+                                        Click="FaceOptions_Click" Background="Transparent"
+                                        Foreground="White" BorderBrush="Gray"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button Content="+ Add Face" Padding="10,5" Click="AddFace_Click"
+                        Background="#5A5A5A" Foreground="White" BorderBrush="Gray"
+                        Margin="0,0,0,16"/>
+
+                <TextBlock Text="Virtual Camera Driver" FontWeight="Bold" FontSize="13"
+                           Foreground="White" Margin="0,0,0,6"/>
+                <TextBlock Name="DriverStatusText" Text="Driver: unknown" Foreground="LightGray"
+                           FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Content="Install" Width="80" Margin="0,0,8,0" Click="InstallDriver_Click"/>
+                    <Button Content="Uninstall" Width="80" Click="UninstallDriver_Click"/>
+                </StackPanel>
+
+                <TextBlock Text="Filter DLL:" Foreground="White" FontSize="11" Margin="0,12,0,2"/>
+                <TextBlock Name="FilterDllText" Foreground="LightGray" FontSize="10"
+                           TextWrapping="Wrap" Margin="0,0,0,4"/>
+                <Button Content="Choose filter DLL…" Padding="6,3" Click="ChooseFilter_Click"
+                        Background="#5A5A5A" Foreground="White" BorderBrush="Gray"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

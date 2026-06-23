@@ -13,13 +13,37 @@ While blurring the entire background is an option, this can sometimes create str
 
 ## Implementation
 
-The project is a Visual Studio 2019 solution, written in C# using the OpenCV libraries and haarcascades object detection algorithms for faces.
+The project is a Visual Studio solution split into three components:
 
-To relay the processed video to another application, a virtual "JustShowMe Cam" is initialized, which is taken from https://github.com/tshino/softcam (MIT Licensed)
+1. **`justshowme_cam`** (C++) — the **JustShowMe Virtual Webcam** DirectShow driver. Once registered it always appears in the camera list of any app (Zoom, Teams, browsers) and serves frames out of a shared-memory buffer. Forked from https://github.com/tshino/softcam (MIT Licensed).
+2. **`justshowme_gui`** (C#/WPF) — the configuration GUI and the frame pump. While running it opens the configured real webcam, runs the filter on every frame, and pushes the result into the virtual camera. It shows a live **Before/After** preview inline and manages driver install/registration. The GUI must be running for filtering to happen.
+3. **`justshowme_filter`** (C# DLL) — the swappable AI filter. The default implementation does Haar-cascade face detection (OpenCV) + selective Gaussian blur. The GUI loads whichever DLL the user configures; the default is the `justshowme_filter.dll` beside the GUI exe.
+
+Settings and the filter DLL path are stored in `%ProgramData%\JustShowMe\settings.ini` so every JustShowMe process reads the same config.
+
+### Building
+
+**Requirements:** Visual Studio 2019 or 2022 with the **Desktop development with C++** and **.NET desktop development** workloads.
+
+You can build either way:
+
+- **Visual Studio:** open `JustShowMe.sln` and build the **x64** configuration (the C++ driver is x64-only).
+- **Command line:** run the build script from the repo root:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\build.ps1            # Debug (default)
+  powershell -ExecutionPolicy Bypass -File .\build.ps1 -Configuration Release
+  ```
+
+  `build.ps1` finds MSBuild via `vswhere` (so it works on any machine with a suitable VS install) and builds the whole solution as x64.
+
+All three projects output to a single `Debug\` (or `Release\`) folder in the repo root — a self-contained, distributable build with the GUI exe, both DLLs, the cascade, and the OpenCvSharp natives. Click **Install** in the GUI (elevates via `regsvr32`) to register the virtual camera, then **Start**.
+
+> **Note:** the driver is an in-process COM DLL, so it can't be overwritten while any app has the virtual camera loaded. If a rebuild fails with `LNK1168: cannot open justshowme_cam.dll for writing`, close apps that use the camera (Zoom, Chrome, Teams, the Camera app) and build again.
 
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 
-As I am a Software Developer and Public Policy student, this project was an experiment to create an example of how AI can be used to address ethical considerations in a positive way.
+As I am a Software Developer and hold an MA in Public Policy, this project was an experiment to create an example of how AI can be used to address ethical considerations in a positive way.
 
 The focus of this project basically boils down to "consent."
 
