@@ -60,4 +60,4 @@ As policymakers worldwide grapple with regulating AI systems I hope this project
 
 ## License
 
-This project is licensed under Apache License v2.0
+This project is licensed under GPL v3
