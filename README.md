@@ -107,6 +107,8 @@ The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection
 
 The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) face-recognition model (Yaoyao Zhong & Weihong Deng), distributed via the OpenCV Zoo, used to recognise allowed faces.
 
+The [stock video](https://www.youtube.com/watch?v=WM9dkCgW3cM) used in the demo video above.
+
 ## License
 
 This project is licensed under GPL v3
