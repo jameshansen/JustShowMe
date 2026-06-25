@@ -1,10 +1,9 @@
 # JustShowMe
 <img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
 
-## Download
-[![Version](https://img.shields.io/github/v/release/jameshansen/JustShowMe?color=7a39fb)](https://github.com/jameshansen/JustShowMe/releases/latest)
+**Download the latest version [here](https://github.com/jameshansen/JustShowMe/releases/latest).**
 
-[![License: MIT](https://img.shields.io/github/license/jameshansen/JustShowMe)](https://github.com/jameshansen/JustShowMe/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/release/jameshansen/JustShowMe?color=7a39fb)](https://github.com/jameshansen/JustShowMe/releases/latest) [![License: MIT](https://img.shields.io/github/license/jameshansen/JustShowMe)](https://github.com/jameshansen/JustShowMe/blob/main/LICENSE)
 
 ## Webcam Privacy Filter Concept
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
