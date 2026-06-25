@@ -1,9 +1,7 @@
 # JustShowMe
 <img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
 
-Webcam Privacy Filter
-
-## Concept
+## Webcam Privacy Filter Concept
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
 
 From an ethics and technology policy standpoint, this creates a problem, as people may appear on video who have not consented as such, even more problematic if the meeting is being recorded.
@@ -12,7 +10,7 @@ While blurring the entire background is an option, this can sometimes create str
 
 "JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals privacy.
 
-<img width="1006" height="633" alt="justshowme_gui_LvRVK6l0sH" src="https://github.com/user-attachments/assets/b5351e58-bc1a-4f21-b69b-917b07737010" />
+<img width="1000" height="634" alt="justshowme_demo" src="https://github.com/user-attachments/assets/9856bedf-e27e-44bc-ae72-dff84a3364f5" />
 
 ## Implementation
 
