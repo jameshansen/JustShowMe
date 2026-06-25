@@ -40,7 +40,7 @@ namespace JustShowMe.Filter
 
         /// <param name="longSide">Detection input long-side in pixels (rounded to a
         /// multiple of 32). Smaller = faster, larger = better on small faces.</param>
-        public YuNetFaceDetector(string onnxPath, float scoreThreshold = 0.7f,
+        public YuNetFaceDetector(string onnxPath, float scoreThreshold = 0.6f,
                                  float nmsThreshold = 0.3f, int longSide = 640)
         {
             _net = CvDnn.ReadNetFromOnnx(onnxPath);
@@ -76,6 +76,7 @@ namespace JustShowMe.Filter
 
                     var boxes = new List<Rect>();
                     var scores = new List<float>();
+                    var landmarks = new List<Point2f[]>();
                     double sx = (double)ow / iw, sy = (double)oh / ih;
 
                     for (int si = 0; si < Strides.Length; si++)
@@ -85,6 +86,7 @@ namespace JustShowMe.Filter
                         float[] cls = ToFloats(outs[si]);          // cls_*
                         float[] obj = ToFloats(outs[3 + si]);      // obj_*
                         float[] bbox = ToFloats(outs[6 + si]);     // bbox_* (4 per prior)
+                        float[] kps = ToFloats(outs[9 + si]);      // kps_*  (10 per prior)
 
                         int n = rows * cols;
                         for (int idx = 0; idx < n; idx++)
@@ -112,6 +114,14 @@ namespace JustShowMe.Filter
                             int bh = (int)Math.Round(h * sy);
                             boxes.Add(new Rect(x1, y1, bw, bh));
                             scores.Add(score);
+
+                            // Same decode for the 5 landmarks: (col+kx)*s, (row+ky)*s.
+                            var lm = new Point2f[5];
+                            for (int j = 0; j < 5; j++)
+                                lm[j] = new Point2f(
+                                    (float)((col + kps[idx * 10 + 2 * j]) * s * sx),
+                                    (float)((row + kps[idx * 10 + 2 * j + 1]) * s * sy));
+                            landmarks.Add(lm);
                         }
                     }
 
@@ -120,7 +130,10 @@ namespace JustShowMe.Filter
                     CvDnn.NMSBoxes(boxes, scores, _scoreThreshold, _nmsThreshold,
                                    out int[] keep, 1.0f, 0);
                     foreach (int k in keep)
-                        result.Add(new FaceDetection { Box = boxes[k], Score = scores[k] });
+                        result.Add(new FaceDetection
+                        {
+                            Box = boxes[k], Score = scores[k], Landmarks = landmarks[k],
+                        });
                 }
                 finally
                 {

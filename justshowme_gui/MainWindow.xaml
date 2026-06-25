@@ -84,7 +84,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <Image Grid.Column="0" Width="40" Height="40"
-                                       Source="{Binding FaceImage}" Margin="0,0,10,0"/>
+                                       Source="{Binding DisplayImage}" Margin="0,0,10,0"/>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
                                     <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="LightGray"/>
@@ -99,7 +99,39 @@
 
                 <Button Content="+ Add Face" Padding="10,5" Click="AddFace_Click"
                         Background="#5A5A5A" Foreground="White" BorderBrush="Gray"
-                        Margin="0,0,0,16"/>
+                        Margin="0,0,0,12"/>
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Match strictness" Foreground="White" FontSize="12"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Name="ThresholdValueText" Text="0.40"
+                               Foreground="LightGray" FontSize="12"/>
+                    <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="ThresholdSlider"
+                            Minimum="0.20" Maximum="0.70" SmallChange="0.01" LargeChange="0.05"
+                            ValueChanged="ThresholdSlider_ValueChanged"/>
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2"
+                               Text="Lower = looser (more faces treated as the same person). Higher = stricter."
+                               Foreground="Gray" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                    <TextBlock Text="Snapshots per face:" Foreground="White" FontSize="12"
+                               VerticalAlignment="Center"/>
+                    <Button Content="–" Width="26" Height="22" Margin="8,0,0,0" Click="SnapshotMinus_Click"
+                            Background="#5A5A5A" Foreground="White" BorderBrush="Gray"/>
+                    <TextBlock Name="SnapshotCountText" Text="5" Foreground="White" Width="28"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                    <Button Content="+" Width="26" Height="22" Click="SnapshotPlus_Click"
+                            Background="#5A5A5A" Foreground="White" BorderBrush="Gray"/>
+                </StackPanel>
 
                 <TextBlock Text="Virtual Camera Driver" FontWeight="Bold" FontSize="13"
                            Foreground="White" Margin="0,0,0,6"/>

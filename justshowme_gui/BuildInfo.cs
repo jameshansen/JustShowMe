@@ -4,6 +4,6 @@
     /// shown in the window title bar.
     internal static class BuildInfo
     {
-        public const string Number = "0006";
+        public const string Number = "0007";
     }
 }

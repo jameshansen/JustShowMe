@@ -9,6 +9,9 @@ namespace JustShowMe.Filter
     {
         public Rect Box;
         public float Score;
+        /// YuNet's 5 landmarks (right eye, left eye, nose, right & left mouth
+        /// corners) in image coords — used to align the crop for SFace. May be null.
+        public Point2f[] Landmarks;
     }
 
     /// A face detector. Two implementations: YuNetFaceDetector (DNN, any angle) and

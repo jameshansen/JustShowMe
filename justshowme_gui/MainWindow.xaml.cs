@@ -32,7 +32,27 @@ namespace JustShowMe
             BlurAllRadio.IsChecked = _config.Mode == FilterMode.BlurAll;
             BlurNotAllowedRadio.IsChecked = _config.Mode == FilterMode.BlurNotAllowed;
             FilterDllText.Text = _config.FilterDllPath;
+            FaceMatch.Threshold = _config.MatchThreshold;
+            ThresholdSlider.Value = _config.MatchThreshold;   // fires ValueChanged (guarded)
+            ThresholdValueText.Text = _config.MatchThreshold.ToString("0.00");
+
+            DetectedFace.MaxSnapshots = _config.SnapshotCount;
+            SnapshotCountText.Text = _config.SnapshotCount.ToString();
+
+            LoadSavedFaces();
             RefreshDriverStatus();
+        }
+
+        // Restore the allowed list saved at last shutdown. Each loaded face goes into
+        // both lists: AllowedFaces (so it's allowed and Start syncs its embeddings) and
+        // DetectedFaces (so when the person reappears they match this row, not a dupe).
+        private void LoadSavedFaces()
+        {
+            foreach (var f in FaceStore.Load(Config.FaceListDir))
+            {
+                AllowedFaces.Add(f);
+                DetectedFaces.Add(f);
+            }
         }
 
         // ---- camera list ----
@@ -142,19 +162,40 @@ namespace JustShowMe
         {
             foreach (var f in faces)
             {
-                var existing = DetectedFaces.FirstOrDefault(d => d.Id == f.Id);
+                // Match to an existing row by identity (any of its snapshot embeddings)
+                // first, so a person who got a fresh tracker id (left frame, video
+                // looped) updates their row instead of spawning a new "New Face".
+                // Fall back to the id when there's no embedding yet.
+                var existing =
+                    (f.Embedding != null
+                        ? DetectedFaces.FirstOrDefault(d =>
+                              d.Snapshots.Any(s => s.Embedding != null && FaceMatch.IsSame(s.Embedding, f.Embedding)))
+                        : null)
+                    ?? DetectedFaces.FirstOrDefault(d => d.Id == f.Id);
+
                 if (existing == null)
                 {
-                    DetectedFaces.Add(new DetectedFace
+                    var nf = new DetectedFace
                     {
-                        Id = f.Id,
-                        Name = "New Face",
-                        DateAdded = DateTime.Now,
-                        LastSeen = DateTime.Now,
-                        FaceImage = _pump?.GetThumbnail(f.Box),
-                    });
+                        Id = f.Id, Name = "New Face",
+                        DateAdded = DateTime.Now, LastSeen = DateTime.Now,
+                    };
+                    nf.AddSnapshot(_pump?.GetThumbnail(f.Box), f.Embedding);
+                    DetectedFaces.Add(nf);
                 }
-                else existing.LastSeen = DateTime.Now;
+                else
+                {
+                    existing.Id = f.Id;
+                    existing.LastSeen = DateTime.Now;
+                    // Refresh the gallery at most ~once a second so the 5 snapshots
+                    // span recent time instead of being 5 near-identical frames.
+                    if (f.Embedding != null &&
+                        DateTime.Now - existing.LastSnapshot > TimeSpan.FromSeconds(1))
+                    {
+                        existing.AddSnapshot(_pump?.GetThumbnail(f.Box), f.Embedding);
+                        if (AllowedFaces.Contains(existing)) SyncAllowedIds();
+                    }
+                }
             }
 
             // Drop faces not seen for 10s unless they're allowed.
@@ -166,12 +207,17 @@ namespace JustShowMe
             FaceCountText.Text = $"Faces detected: {DetectedFaces.Count}";
         }
 
-        // ponytail: publish a fresh immutable set so the pump thread never reads a
-        // set mid-mutation (reference assignment is atomic).
+        // ponytail: publish a fresh immutable list so the pump thread never reads it
+        // mid-mutation (reference assignment is atomic). Every snapshot embedding of
+        // every allowed face goes in, so a person is recognised across the angles we
+        // captured — more reference vectors, better recall.
         private void SyncAllowedIds()
         {
             if (_pump != null)
-                _pump.Settings.AllowedFaceIds = new HashSet<int>(AllowedFaces.Select(f => f.Id));
+                _pump.Settings.AllowedEmbeddings =
+                    AllowedFaces.SelectMany(f => f.Snapshots)
+                                .Where(s => s.Embedding != null)
+                                .Select(s => s.Embedding).ToList();
         }
 
         // ---- face management ----
@@ -188,7 +234,12 @@ namespace JustShowMe
             if (edit.ShowDialog() != true) return;
 
             if (face.ShouldDelete) { DetectedFaces.Remove(face); AllowedFaces.Remove(face); }
-            else if (!AllowedFaces.Contains(face)) { face.IsExistingFace = true; AllowedFaces.Add(face); }
+            else if (!AllowedFaces.Contains(face))
+            {
+                face.IsExistingFace = true;
+                face.DisplayImage = face.FaceImage; // freeze the list thumbnail at add time
+                AllowedFaces.Add(face);
+            }
             SyncAllowedIds();
         }
 
@@ -212,6 +263,33 @@ namespace JustShowMe
             {
                 AllowedFaces.Remove(face); DetectedFaces.Remove(face); SyncAllowedIds();
             }
+        }
+
+        // Higher = stricter (faces must look more alike to count as the same person).
+        // Tune up if different people get merged / the wrong face un-blurs; down if an
+        // allowed face keeps re-blurring. Saved to the ini and applied live.
+        private void ThresholdSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            FaceMatch.Threshold = e.NewValue;
+            _config.MatchThreshold = e.NewValue;
+            _config.Save();
+            if (ThresholdValueText != null) ThresholdValueText.Text = e.NewValue.ToString("0.00");
+        }
+
+        // ---- snapshots-per-face stepper ----
+        private void SnapshotPlus_Click(object sender, RoutedEventArgs e) => SetSnapshotCount(_config.SnapshotCount + 1);
+        private void SnapshotMinus_Click(object sender, RoutedEventArgs e) => SetSnapshotCount(_config.SnapshotCount - 1);
+
+        private void SetSnapshotCount(int n)
+        {
+            n = Math.Max(1, Math.Min(20, n));
+            _config.SnapshotCount = n;
+            _config.Save();
+            DetectedFace.MaxSnapshots = n;
+            foreach (var f in DetectedFaces) f.TrimSnapshots();   // shrink existing galleries if lowered
+            SnapshotCountText.Text = n.ToString();
+            SyncAllowedIds();
         }
 
         private void FilterMode_Changed(object sender, RoutedEventArgs e)
@@ -274,6 +352,8 @@ namespace JustShowMe
         {
             Stop();
             _config.Save();
+            try { FaceStore.Save(Config.FaceListDir, AllowedFaces); }
+            catch (Exception ex) { Log.Write("FaceStore.Save", ex); }
             base.OnClosed(e);
         }
     }

@@ -103,6 +103,7 @@
     <Compile Include="CameraEnumerator.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Config.cs" />
+    <Compile Include="FaceStore.cs" />
     <Compile Include="VirtualWebcam.cs" />
     <Compile Include="FilterHost.cs" />
     <Compile Include="DriverManager.cs" />

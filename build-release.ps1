@@ -71,6 +71,7 @@ $files = @(
     'justshowme_cam.dll',
     'justshowme_filter.dll',
     'face_detection_yunet_2023mar.onnx',
+    'face_recognition_sface_2021dec.onnx',
     'OpenCvSharpExtern.dll',
     'opencv_videoio_ffmpeg4110_64.dll'
 )

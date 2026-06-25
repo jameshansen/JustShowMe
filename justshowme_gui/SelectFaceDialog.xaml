@@ -20,18 +20,23 @@
             <ListBox Grid.Row="1" Name="FaceListBox" Background="#3C3C3C" BorderBrush="Gray">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Grid Margin="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Image Grid.Column="0" Width="60" Height="60"
-                                   Source="{Binding FaceImage}" Margin="0,0,15,0"/>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <StackPanel Margin="10">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                 <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" Foreground="White"/>
-                                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="LightGray"/>
+                                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="LightGray" Margin="10,2,0,0"/>
                             </StackPanel>
-                        </Grid>
+                            <!-- Up to 5 latest snapshots grouped for this one identity. -->
+                            <ItemsControl ItemsSource="{Binding Snapshots}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Image Width="56" Height="56" Source="{Binding Image}" Margin="0,0,6,0"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>

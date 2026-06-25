@@ -15,14 +15,49 @@ namespace JustShowMe.Filter
     {
         public FilterMode Mode = FilterMode.BlurNotAllowed;
         public int BlurStrength = 51;                       // Gaussian kernel size; forced odd by the filter.
-        public HashSet<int> AllowedFaceIds = new HashSet<int>();
+
+        /// Face embeddings (from SFace) the user has allowed. A face is left clear
+        /// when it matches one of these by cosine similarity — recognition, not the
+        /// per-frame track id, so allowing survives the person leaving and returning.
+        /// ponytail: the GUI publishes a fresh list on change; reference swap is atomic.
+        public List<float[]> AllowedEmbeddings = new List<float[]>();
     }
 
-    /// One face the filter found this frame. The GUI maps Id -> name/thumbnail.
+    /// One face the filter found this frame. The GUI maps Id -> name/thumbnail and
+    /// keeps the latest Embedding so it can add it to the allowed list on request.
     public struct DetectedFaceInfo
     {
         public int Id;
         public Rect Box;
+        public float[] Embedding;
+    }
+
+    /// "Is this the same person?" by SFace embedding. Shared by the filter (blur
+    /// decision) and the GUI (so one person is one list row, not one per track id).
+    public static class FaceMatch
+    {
+        /// Cosine cutoff for "same identity". SFace's tuned value is 0.363; default a
+        /// touch stricter because for a privacy tool a false match un-blurs the wrong
+        /// person — the costly direction. A miss merely re-blurs a known face.
+        /// Mutable so the GUI's strictness slider can tune it (persisted to the ini).
+        /// ponytail: plain static — filter + GUI share the one loaded assembly.
+        public static double Threshold = 0.40;
+
+        public static bool IsSame(float[] a, float[] b) => Cosine(a, b) >= Threshold;
+
+        public static double Cosine(float[] a, float[] b)
+        {
+            if (a == null || b == null || a.Length != b.Length) return -1;
+            double dot = 0, na = 0, nb = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                dot += a[i] * b[i];
+                na += a[i] * a[i];
+                nb += b[i] * b[i];
+            }
+            if (na <= 0 || nb <= 0) return -1;
+            return dot / (Math.Sqrt(na) * Math.Sqrt(nb));
+        }
     }
 
     /// The contract a swappable filter DLL must implement. The GUI loads the
