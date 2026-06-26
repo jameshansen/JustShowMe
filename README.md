@@ -14,7 +14,7 @@ With remote work becoming increasingly common, working and appearing on camera i
 
 From an ethics and technology policy standpoint, this creates a problem, as people may appear on video who have not consented as such, even more problematic if the meeting is being recorded.
 
-While blurring the entire background is an option, this can sometimes create strange effects make your video feed less visually appealing.
+While blurring the entire background is an option, this can sometimes create strange effects and makes your video feed less visually appealing.
 
 "JustShowMe" provides the solution. Using face tracking, people are identified when they appear and either blurred or replaced with the background from previous video data, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
 
