@@ -7,14 +7,16 @@
 
 On first run click the **Install** button to install the Virtual Webcam driver.
 
-## Webcam Privacy Filter Concept
+## About and Concept
+JustShowMe is a webcam video filter that lets you show your face, and your surroundings, but porotects the privacy of the people around you.
+
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
 
 From an ethics and technology policy standpoint, this creates a problem, as people may appear on video who have not consented as such, even more problematic if the meeting is being recorded.
 
 While blurring the entire background is an option, this can sometimes create strange effects make your video feed less visually appealing.
 
-"JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
+"JustShowMe" provides the solution. Using face tracking, people are identified when they appear and either blurred or replaced with the background from previous video data, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
 
 <img width="1000" height="643" alt="smartfill_demo" src="https://github.com/user-attachments/assets/32090fd0-1867-42f1-a10d-8e11542ff221" />
 
@@ -117,6 +119,10 @@ This script:
 - **Stages only what's needed** (the exe, the driver and filter DLLs, the YuNet and SFace models, the native OpenCvSharp DLLs, and the LICENSE) and zips them to `justshowme_build<NNNN>.zip` in the repo root, ready to attach to a GitHub release.
 
 Native DLLs (`OpenCvSharpExtern.dll`, the ffmpeg DLL) can't be embedded, so they ship as files directly beside the exe.
+
+## Future Improvement Plans
+* Advanced Smart Fill Algorithm: The current approach of "rewinding" the video feed to replace an area doesn't handle people standing in one spot for more than a few seconds, we could better identify and update a "background plate" to be used for replacement
+* Improved Body Area detection: The current approach uses a rectangle exended from the face down, we could use a better algorithm to isolate the actual shape of the body, but this would have to be optimized for everyday PCs.
 
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 
