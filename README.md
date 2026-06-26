@@ -26,7 +26,7 @@ The project is a Visual Studio solution split into three components:
 
 1. **`justshowme_cam`** (C++) - the **JustShowMe Virtual Webcam** DirectShow driver. Once registered it always appears in the camera list of any app (Zoom, Teams, browsers) and serves frames out of a shared-memory buffer. Forked from https://github.com/tshino/softcam (MIT Licensed).
 2. **`justshowme_gui`** (C#/WPF) - the configuration GUI and the frame pump. While running it opens the configured real webcam, runs the filter on every frame, and pushes the result into the virtual camera. It shows a live **Before/After** preview inline and manages driver install/registration. The GUI must be running for filtering to happen.
-3. **`justshowme_filter`** (C# DLL) - the AI filter, `justshowme_filter.dll`, bundled beside the GUI exe. It does **any-angle face detection (YuNet)**, **face recognition (SFace)** so an allowed person stays allowed across angles and after leaving frame, cross-frame tracking, and per-person blur — or **smart-fill** erasure that replaces an unwanted person with recent background.
+3. **`justshowme_filter`** (C# DLL) - the AI filter, `justshowme_filter.dll`, bundled beside the GUI exe. It does **any-angle face detection (YuNet)**, **face recognition (SFace)** so an allowed person stays allowed across angles and after leaving frame, cross-frame tracking, and per-person blur - or **smart-fill** erasure that replaces an unwanted person with recent background.
 
 Settings and the filter DLL path are stored in `%ProgramData%\JustShowMe\settings.ini` so every JustShowMe process reads the same config.
 
@@ -60,15 +60,15 @@ The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to
 
 The GUI's **Mode** (saved to the ini) chooses what happens to each acted-on person:
 
-- **Blur Faces** — blur the padded face box.
-- **Blur Person** — blur a whole-person region anchored on the face (~3 face-widths wide by default, from a face-height above the head down to the bottom of the frame). Since the face is the only part we can *identify*, the body is estimated from it rather than detected separately. It deliberately over-blurs a generous rectangle — for a privacy tool, covering too much is the safe error. A **Body zone size** slider scales it (up to 10 face-widths).
-- **Smart Fill Person** — *erase* the person: replace their whole-person region with the background from a few seconds ago. A **Smart fill: go back** slider sets how far back (default 1 s). Designed for the "someone walks into shot" case — a second ago that space was empty, so they vanish into the real background.
+- **Blur Faces** - blur the padded face box.
+- **Blur Person** - blur a whole-person region anchored on the face (~3 face-widths wide by default, from a face-height above the head down to the bottom of the frame). Since the face is the only part we can *identify*, the body is estimated from it rather than detected separately. It deliberately over-blurs a generous rectangle - for a privacy tool, covering too much is the safe error. A **Body zone size** slider scales it (up to 10 face-widths).
+- **Smart Fill Person** - *erase* the person: replace their whole-person region with the background from a few seconds ago. A **Smart fill: go back** slider sets how far back (default 1 s). Designed for the "someone walks into shot" case - a second ago that space was empty, so they vanish into the real background.
 
-Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect — a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
+Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect - a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
 
 **How Smart Fill works:** the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
 
-### The allowed list — locked faces
+### The Exclusion List - locked faces
 
 When you **Add Face**, the chosen person is *locked*: the snapshots and embeddings captured at that moment are frozen and never overwritten by later frames or similar-looking people, and the same person can't be added twice. The Edit dialog shows the locked frames. The list is saved on exit to one file per face under `%ProgramData%\JustShowMe\facelist\` and restored on launch, so your allowed people persist across runs (removed faces are pruned). Blur/erase decisions are made against those locked embeddings, so "allowed" stays stable even as the live video changes.
 
