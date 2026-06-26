@@ -1,18 +1,22 @@
 # JustShowMe
 <img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
 
-Webcam Privacy Filter
+**Download the latest version [here](https://github.com/jameshansen/JustShowMe/releases/latest).**
 
-## Concept
+[![Version](https://img.shields.io/github/v/release/jameshansen/JustShowMe?color=7a39fb)](https://github.com/jameshansen/JustShowMe/releases/latest) [![License: MIT](https://img.shields.io/github/license/jameshansen/JustShowMe)](https://github.com/jameshansen/JustShowMe/blob/main/LICENSE)
+
+On first run click the **Install** button to install the Virtual Webcam driver.
+
+## Webcam Privacy Filter Concept
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
 
 From an ethics and technology policy standpoint, this creates a problem, as people may appear on video who have not consented as such, even more problematic if the meeting is being recorded.
 
 While blurring the entire background is an option, this can sometimes create strange effects make your video feed less visually appealing.
 
-"JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals privacy.
+"JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
 
-<img width="1006" height="633" alt="justshowme_gui_LvRVK6l0sH" src="https://github.com/user-attachments/assets/b5351e58-bc1a-4f21-b69b-917b07737010" />
+<img width="1000" height="634" alt="justshowme_demo" src="https://github.com/user-attachments/assets/9856bedf-e27e-44bc-ae72-dff84a3364f5" />
 
 ## Implementation
 
@@ -42,13 +46,13 @@ The model file `face_detection_yunet_2023mar.onnx` (~230 KB) is bundled next to 
 
 ### Face recognition - why YuNet and SFace are complementary
 
-Detection alone can't tell *who* a face is. The IoU tracker gives faces stable ids only while they stay roughly put frame-to-frame; the moment a person leaves and returns, the detector blinks for too long, or a test video loops, they jump position and get a **brand-new id**. If "allowed" were keyed on that id, the person would silently start getting blurred again - and a new "New Face" would keep reappearing in the list. That's a recognition problem, not a detection one.
+Detection alone can't tell *who* a face is. The IoU tracker gives faces stable ids only while they stay roughly put frame-to-frame; the moment a person leaves and returns, the detector blinks for too long, or a test video loops, they jump position and get a **brand-new id**. If "allowed" were keyed on that id, the person would silently start getting blurred again - and a new "New Face" would keep reappearing in the list.
 
 **YuNet** (detect) and **SFace** (recognise) are a matched pair in the [OpenCV Zoo](https://github.com/opencv/opencv_zoo), designed to compose: YuNet emits 5 facial landmarks, and those landmarks are exactly what SFace needs to align a face before embedding it. So the same model that finds a face hands the recogniser everything it needs - no separate landmark step, no extra dependency (both run through the OpenCvSharp DNN module already in use).
 
 With SFace, "allow this person" stores their **embedding**, not a frame id. Each face is matched against the allowed embeddings by cosine similarity (cutoff `≥ 0.40` - a touch stricter than SFace's tuned 0.363, because a wrong match here un-blurs the wrong person), so allowing survives angle changes, brief disappearances, and re-entry. The cutoff errs toward blurring: a missed match re-blurs a known face (harmless), it never reveals an unknown one. The same embedding match also de-duplicates the GUI's face list, so one person stays one row instead of a new entry each time their track id resets. To keep that reliable the face is aligned to SFace's template with a deterministic closed-form similarity fit over YuNet's 5 landmarks - so the same face yields a stable embedding frame to frame.
 
-The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL the same way and is likewise required.
+The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL.
 
 ### Mode: blur face, blur person, or smart-fill
 
@@ -116,6 +120,8 @@ TheDigitalArtist at Pixabay for the [User Icon Graphic](https://pixabay.com/vect
 The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) face-detection model (Shiqi Yu et al.), distributed via the OpenCV Zoo, used for any-angle face detection.
 
 The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) face-recognition model (Yaoyao Zhong & Weihong Deng), distributed via the OpenCV Zoo, used to recognise allowed faces.
+
+The [stock video](https://www.youtube.com/watch?v=WM9dkCgW3cM) used in the demo video above.
 
 ## License
 
