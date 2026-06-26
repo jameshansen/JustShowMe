@@ -8,7 +8,7 @@
 On first run click the **Install** button to install the Virtual Webcam driver.
 
 ## About and Concept
-JustShowMe is a webcam video filter that lets you show your face, and your surroundings, but porotects the privacy of the people around you.
+JustShowMe is a webcam video filter that lets you show your face, and your surroundings, but protects the privacy of the people around you.
 
 With remote work becoming increasingly common, working and appearing on camera in video meetings in shared spaces, from a coffee shop to a living room is now normal.
 
