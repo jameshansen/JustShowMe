@@ -26,6 +26,9 @@ namespace JustShowMe
 
         public int CameraIndex;
         public FilterMode Mode;
+        public PersonMode PersonMode;
+        public double BodyScale;
+        public double SmartFillSeconds;
         public int BlurStrength;
         public double MatchThreshold;
         public int SnapshotCount;
@@ -49,6 +52,9 @@ namespace JustShowMe
                 CameraIndex = GetInt("Camera", "Index", 0),
                 Mode = GetString("Filter", "Mode", "BlurNotAllowed") == "BlurAll"
                     ? FilterMode.BlurAll : FilterMode.BlurNotAllowed,
+                PersonMode = ParsePersonMode(GetString("Filter", "PersonMode", "BlurFace")),
+                BodyScale = GetDouble("Filter", "BodyScale", 2.5),
+                SmartFillSeconds = GetDouble("Filter", "SmartFillSeconds", 1.0),
                 BlurStrength = GetInt("Filter", "BlurStrength", 51),
                 MatchThreshold = GetDouble("Filter", "MatchThreshold", 0.40),
                 SnapshotCount = GetInt("Filter", "SnapshotCount", 5),
@@ -79,6 +85,9 @@ namespace JustShowMe
             Directory.CreateDirectory(Dir);
             Set("Camera", "Index", CameraIndex.ToString());
             Set("Filter", "Mode", Mode.ToString());
+            Set("Filter", "PersonMode", PersonMode.ToString());
+            Set("Filter", "BodyScale", BodyScale.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Set("Filter", "SmartFillSeconds", SmartFillSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "BlurStrength", BlurStrength.ToString());
             Set("Filter", "MatchThreshold", MatchThreshold.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "SnapshotCount", SnapshotCount.ToString());
@@ -96,6 +105,9 @@ namespace JustShowMe
             GetPrivateProfileString(s, k, def, sb, sb.Capacity, Path_);
             return sb.ToString();
         }
+
+        private static PersonMode ParsePersonMode(string s) =>
+            Enum.TryParse(s, out PersonMode m) ? m : PersonMode.BlurFace;
 
         private static int GetInt(string s, string k, int def) =>
             int.TryParse(GetString(s, k, def.ToString()), out int v) ? v : def;

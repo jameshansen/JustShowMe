@@ -73,6 +73,49 @@
                              Foreground="White" GroupName="FilterMode" IsChecked="True"
                              Margin="0,0,0,8" Checked="FilterMode_Changed"/>
 
+                <TextBlock Text="Mode:" Foreground="White" FontSize="12" Margin="0,2,0,4"/>
+                <RadioButton Name="ModeBlurFaceRadio" Content="Blur Faces" Foreground="White"
+                             GroupName="PersonMode" IsChecked="True" Margin="0,0,0,3"
+                             Checked="PersonMode_Changed"/>
+                <RadioButton Name="ModeBlurPersonRadio" Content="Blur Person" Foreground="White"
+                             GroupName="PersonMode" Margin="0,0,0,3" Checked="PersonMode_Changed"/>
+                <RadioButton Name="ModeSmartFillRadio" Content="Smart Fill Person" Foreground="White"
+                             GroupName="PersonMode" Margin="0,0,0,8" Checked="PersonMode_Changed"/>
+
+                <Grid Name="BodySizePanel" Margin="0,0,0,8" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Body zone size" Foreground="White" FontSize="12"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Name="BodySizeValueText" Text="2.5"
+                               Foreground="LightGray" FontSize="12"/>
+                    <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="BodySizeSlider"
+                            Minimum="1.5" Maximum="4.0" SmallChange="0.1" LargeChange="0.5"
+                            ValueChanged="BodySizeSlider_ValueChanged"/>
+                </Grid>
+
+                <Grid Name="SmartFillPanel" Margin="0,0,0,8" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Smart fill: go back" Foreground="White" FontSize="12"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Name="SmartFillValueText" Text="1.0s"
+                               Foreground="LightGray" FontSize="12"/>
+                    <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="SmartFillSlider"
+                            Minimum="0.5" Maximum="5.0" SmallChange="0.5" LargeChange="1.0"
+                            ValueChanged="SmartFillSlider_ValueChanged"/>
+                </Grid>
+
                 <ListBox ItemsSource="{Binding AllowedFaces}" Background="#4A4A4A"
                          BorderBrush="Gray" MaxHeight="180" MinHeight="90" Margin="0,0,0,8">
                     <ListBox.ItemTemplate>

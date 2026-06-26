@@ -34,7 +34,7 @@ Earlier versions used a single Haar cascade, which only detects forward-facing f
 | `YuNetFaceDetector` | **The YuNet wrapper/decoder.** Loads `face_detection_yunet_2023mar.onnx` via OpenCV's DNN module and decodes its raw outputs, including the 5 facial landmarks. |
 | `SFaceRecognizer` | **The SFace wrapper.** Loads `face_recognition_sface_2021dec.onnx`, aligns each face from YuNet's landmarks, and turns it into a 128-D embedding so faces can be matched by identity. |
 | `FaceTracker` | Lightweight IoU tracker - stable face ids + keeps a face blurred for ~3s after detection drops, so a turning head doesn't flash clear. Carries each face's last embedding through the dropout. |
-| `BlurFaceFilter` | The `IFrameFilter`: detect → embed → track → pad boxes ~15% → Gaussian blur every face except those whose embedding matches an allowed one. |
+| `BlurFaceFilter` | The `IFrameFilter`: detect → embed → track → obscure every person except those whose embedding matches an allowed one. **Mode** is selectable: blur the face, blur the whole person, or smart-fill (erase) the person with recent background. |
 
 **Why a hand-written YuNet decoder?** OpenCvSharp 4.11 doesn't ship the high-level `cv::FaceDetectorYN` wrapper, so `YuNetFaceDetector` reproduces its post-processing itself: per-stride priors (8/16/32), `score = sqrt(cls · obj)`, box decode, and non-max suppression. This keeps us on the OpenCvSharp DNN module we already have - no extra dependency. `SFaceRecognizer` does the same for the missing `cv::FaceRecognizerSF`: align-crop to the canonical 112×112 template, one forward pass, compare by cosine.
 
@@ -49,6 +49,20 @@ Detection alone can't tell *who* a face is. The IoU tracker gives faces stable i
 With SFace, "allow this person" stores their **embedding**, not a frame id. Each face is matched against the allowed embeddings by cosine similarity (cutoff `≥ 0.40` - a touch stricter than SFace's tuned 0.363, because a wrong match here un-blurs the wrong person), so allowing survives angle changes, brief disappearances, and re-entry. The cutoff errs toward blurring: a missed match re-blurs a known face (harmless), it never reveals an unknown one. The same embedding match also de-duplicates the GUI's face list, so one person stays one row instead of a new entry each time their track id resets. To keep that reliable the face is aligned to SFace's template with a deterministic closed-form similarity fit over YuNet's 5 landmarks - so the same face yields a stable embedding frame to frame.
 
 The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL the same way and is likewise required.
+
+### Mode: blur face, blur person, or smart-fill
+
+The GUI's **Mode** (saved to the ini) chooses what happens to each acted-on person:
+
+- **Blur Faces** — blur the padded face box.
+- **Blur Person** — blur a whole-person region anchored on the face (about 2.5 face-widths wide by default, from just above the head down to the bottom of the frame). Since the face is the only part we can *identify*, the body is estimated from it rather than detected separately. It deliberately over-blurs a generous rectangle — for a privacy tool, covering too much is the safe error. A **Body zone size** slider adjusts the width.
+- **Smart Fill Person** — *erase* the person: replace their whole-person region with the background from a few seconds ago. A **Smart fill: go back** slider sets how far back (default 1 s). Designed for the "someone walks into shot" case — a second ago that space was empty, so they vanish into the real background.
+
+Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect — a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
+
+**How Smart Fill works:** while the mode is active the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s, held only while Smart Fill is on). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
+
+> **Limitations (rectangle + temporal, not segmentation):** the fill is a rectangle, so it can paste a patch of old background over real foreground around the person; and if the person was *already* standing there `go-back` seconds ago, the "background" still contains them. It shines for people entering/leaving a mostly-static scene. A proper segmentation mask + a persistent clean-plate background would erase anyone cleanly regardless — the natural next step.
 
 ### Building
 

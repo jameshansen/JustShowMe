@@ -31,6 +31,14 @@ namespace JustShowMe
             LoadWebcams();
             BlurAllRadio.IsChecked = _config.Mode == FilterMode.BlurAll;
             BlurNotAllowedRadio.IsChecked = _config.Mode == FilterMode.BlurNotAllowed;
+            ModeBlurFaceRadio.IsChecked = _config.PersonMode == PersonMode.BlurFace;
+            ModeBlurPersonRadio.IsChecked = _config.PersonMode == PersonMode.BlurPerson;
+            ModeSmartFillRadio.IsChecked = _config.PersonMode == PersonMode.SmartFill;
+            BodySizeSlider.Value = _config.BodyScale;             // fires ValueChanged (guarded)
+            BodySizeValueText.Text = _config.BodyScale.ToString("0.0");
+            SmartFillSlider.Value = _config.SmartFillSeconds;     // fires ValueChanged (guarded)
+            SmartFillValueText.Text = _config.SmartFillSeconds.ToString("0.0") + "s";
+            UpdateModeControls();
             FilterDllText.Text = _config.FilterDllPath;
             FaceMatch.Threshold = _config.MatchThreshold;
             ThresholdSlider.Value = _config.MatchThreshold;   // fires ValueChanged (guarded)
@@ -115,6 +123,9 @@ namespace JustShowMe
 
             _pump = new Pump(filter, new VirtualWebcam(_config.Width, _config.Height, _config.Fps));
             _pump.Settings.Mode = _config.Mode;
+            _pump.Settings.PersonMode = _config.PersonMode;
+            _pump.Settings.BodyScale = _config.BodyScale;
+            _pump.Settings.SmartFillSeconds = _config.SmartFillSeconds;
             _pump.Settings.BlurStrength = _config.BlurStrength;
             SyncAllowedIds();
             _pump.FrameReady += OnFrameReady;
@@ -298,6 +309,47 @@ namespace JustShowMe
             _config.Mode = BlurAllRadio.IsChecked == true ? FilterMode.BlurAll : FilterMode.BlurNotAllowed;
             _config.Save();
             if (_pump != null) _pump.Settings.Mode = _config.Mode;
+        }
+
+        private void PersonMode_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.PersonMode =
+                ModeSmartFillRadio.IsChecked == true ? PersonMode.SmartFill :
+                ModeBlurPersonRadio.IsChecked == true ? PersonMode.BlurPerson : PersonMode.BlurFace;
+            _config.Save();
+            if (_pump != null) _pump.Settings.PersonMode = _config.PersonMode;
+            UpdateModeControls();
+        }
+
+        // Body-size slider applies to whole-person modes; smart-fill seconds only to
+        // Smart Fill. Hide each where it has no effect.
+        private void UpdateModeControls()
+        {
+            bool person = _config.PersonMode != PersonMode.BlurFace;
+            bool smartFill = _config.PersonMode == PersonMode.SmartFill;
+            BodySizePanel.Visibility = person ? Visibility.Visible : Visibility.Collapsed;
+            SmartFillPanel.Visibility = smartFill ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Whole-person zone width (face widths). Sizes both the blur/fill and the safe zone.
+        private void BodySizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.BodyScale = e.NewValue;
+            _config.Save();
+            if (_pump != null) _pump.Settings.BodyScale = e.NewValue;
+            if (BodySizeValueText != null) BodySizeValueText.Text = e.NewValue.ToString("0.0");
+        }
+
+        // How many seconds back to pull the background plate for Smart Fill.
+        private void SmartFillSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.SmartFillSeconds = e.NewValue;
+            _config.Save();
+            if (_pump != null) _pump.Settings.SmartFillSeconds = e.NewValue;
+            if (SmartFillValueText != null) SmartFillValueText.Text = e.NewValue.ToString("0.0") + "s";
         }
 
         // ---- driver ----

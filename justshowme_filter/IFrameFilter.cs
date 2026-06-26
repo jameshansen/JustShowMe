@@ -10,10 +10,25 @@ namespace JustShowMe.Filter
         BlurNotAllowed
     }
 
+    /// How to obscure each acted-on person:
+    ///   BlurFace   - blur just the face box.
+    ///   BlurPerson - blur the whole-body region (anchored on the face).
+    ///   SmartFill  - replace the whole-body region with the background from a few
+    ///                seconds ago, erasing the person (works as they enter the scene).
+    public enum PersonMode
+    {
+        BlurFace,
+        BlurPerson,
+        SmartFill
+    }
+
     /// Settings the GUI hands to the filter every frame.
     public sealed class FilterSettings
     {
         public FilterMode Mode = FilterMode.BlurNotAllowed;
+        public PersonMode PersonMode = PersonMode.BlurFace; // blur face / blur person / smart-fill person.
+        public double BodyScale = 2.5;                      // whole-person region width, in face widths.
+        public double SmartFillSeconds = 1.0;               // how far back to pull the background plate.
         public int BlurStrength = 51;                       // Gaussian kernel size; forced odd by the filter.
 
         /// Face embeddings (from SFace) the user has allowed. A face is left clear
