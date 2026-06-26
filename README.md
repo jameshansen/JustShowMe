@@ -66,8 +66,6 @@ Each allowed person's region is a **safe zone**: their original pixels are snaps
 
 **How Smart Fill works:** while the mode is active the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s, held only while Smart Fill is on). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
 
-> **Limitations (rectangle + temporal, not segmentation):** the fill is a rectangle, so it can paste a patch of old background over real foreground around the person; and if the person was *already* standing there `go-back` seconds ago, the "background" still contains them. It shines for people entering/leaving a mostly-static scene. A proper segmentation mask + a persistent clean-plate background would erase anyone cleanly regardless — the natural next step.
-
 ### Building
 
 **Requirements:** Visual Studio 2019 or 2022 with the **Desktop development with C++** and **.NET desktop development** workloads.
