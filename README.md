@@ -16,7 +16,9 @@ While blurring the entire background is an option, this can sometimes create str
 
 "JustShowMe" provides the solution. Using OpenCV, other faces are identified when they appear and blurred selectively, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
 
-<img width="1000" height="634" alt="justshowme_demo" src="https://github.com/user-attachments/assets/9856bedf-e27e-44bc-ae72-dff84a3364f5" />
+<img width="1000" height="643" alt="smartfill_demo" src="https://github.com/user-attachments/assets/e8ff2886-678d-4898-be86-0a4443417599" />
+
+<img width="1000" height="643" alt="blur_demo_2" src="https://github.com/user-attachments/assets/339ea7d9-8a48-484d-965e-492b30dd18c8" />
 
 ## Implementation
 
@@ -133,7 +135,9 @@ The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection
 
 The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) face-recognition model (Yaoyao Zhong & Weihong Deng), distributed via the OpenCV Zoo, used to recognise allowed faces.
 
-The [stock video](https://www.youtube.com/watch?v=WM9dkCgW3cM) used in the demo video above.
+[Font Awesome](https://fontawesome.com/) for the button SVG icons.
+
+The [stock](https://www.youtube.com/watch?v=WM9dkCgW3cM) [videos][(https://www.youtube.com/watch?v=WM9dkCgW3cM](https://www.youtube.com/watch?v=g0lMymp-FUc)) used in the demo video above.
 
 ## License
 
