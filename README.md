@@ -133,7 +133,9 @@ The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection
 
 The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) face-recognition model (Yaoyao Zhong & Weihong Deng), distributed via the OpenCV Zoo, used to recognise allowed faces.
 
-The [stock video](https://www.youtube.com/watch?v=WM9dkCgW3cM) used in the demo video above.
+[Font Awesome](https://fontawesome.com/) for the button SVG icons.
+
+The [stock](https://www.youtube.com/watch?v=WM9dkCgW3cM) [videos][(https://www.youtube.com/watch?v=WM9dkCgW3cM](https://www.youtube.com/watch?v=g0lMymp-FUc)) used in the demo video above.
 
 ## License
 
