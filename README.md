@@ -66,7 +66,7 @@ The GUI's **Mode** (saved to the ini) chooses what happens to each acted-on pers
 
 Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect — a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
 
-**How Smart Fill works:** while the mode is active the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s, held only while Smart Fill is on). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
+**How Smart Fill works:** the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
 
 ### The allowed list — locked faces
 
