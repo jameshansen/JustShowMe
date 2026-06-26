@@ -384,6 +384,10 @@ namespace JustShowMe
                 : DriverManager.IsRegistered ? "Driver: installed and registered"
                 : "Driver: present but not registered";
             DriverStatusText.Text = s;
+
+            // Blue "Install" prompts action when not registered; grey once installed.
+            InstallButton.Background = new SolidColorBrush(DriverManager.IsRegistered
+                ? Color.FromRgb(0x4A, 0x4A, 0x4A) : Color.FromRgb(0x1E, 0x88, 0xE5));
         }
 
         private void InstallDriver_Click(object sender, RoutedEventArgs e)

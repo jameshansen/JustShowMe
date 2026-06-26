@@ -2,7 +2,76 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="JustShowMe - Privacy Webcam Filter"
-        Height="640" Width="1020" Background="#2B2B2B" Icon="icon.ico">
+        Height="640" Width="1020" Background="#2B2B2B" Icon="icon.ico"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- RadioButton re-templated as an icon "toggle" button: grey when off, pale
+             green with a green border and green icon/text when selected. -->
+        <Style x:Key="IconToggle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#CFCFCF"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,5,5,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="4" BorderThickness="1"
+                                Background="#4A4A4A" BorderBrush="#5A5A5A" Padding="8,5">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#7A7A7A"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#CDEBD6"/>
+                                <Setter TargetName="bd" Property="BorderBrush" Value="#4CAF50"/>
+                                <Setter Property="Foreground" Value="#1B7A3A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Flat rounded button matching the toggle look; colour via Background. -->
+        <Style x:Key="FlatButton" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#4A4A4A"/>
+            <Setter Property="BorderBrush" Value="#5A5A5A"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="4" BorderThickness="1"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
@@ -51,6 +120,37 @@
                                        VerticalAlignment="Center" FontSize="13"/>
                         </Grid>
                     </Border>
+
+                    <Border Margin="0,5,0,0" BorderBrush="Gray" BorderThickness="1"
+                            Background="#3C3C3C" Padding="10">
+                        <StackPanel>
+                            <TextBlock Text="Virtual Webcam Driver" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Name="DriverStatusText" Text="Driver: unknown" Foreground="LightGray"
+                                       FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Name="InstallButton" Style="{StaticResource FlatButton}"
+                                        Padding="14,6" Margin="0,0,8,0" Click="InstallDriver_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="14" Height="14" Margin="0,0,8,0">
+                                            <Path Fill="White"
+                                                  Data="M352 96C352 78.3 337.7 64 320 64C302.3 64 288 78.3 288 96L288 306.7L246.6 265.3C234.1 252.8 213.8 252.8 201.3 265.3C188.8 277.8 188.8 298.1 201.3 310.6L297.3 406.6C309.8 419.1 330.1 419.1 342.6 406.6L438.6 310.6C451.1 298.1 451.1 277.8 438.6 265.3C426.1 252.8 405.8 252.8 393.3 265.3L352 306.7L352 96zM160 384C124.7 384 96 412.7 96 448L96 480C96 515.3 124.7 544 160 544L480 544C515.3 544 544 515.3 544 480L544 448C544 412.7 515.3 384 480 384L433.1 384L376.5 440.6C345.3 471.8 294.6 471.8 263.4 440.6L206.9 384L160 384zM464 440C477.3 440 488 450.7 488 464C488 477.3 477.3 488 464 488C450.7 488 440 477.3 440 464C440 450.7 450.7 440 464 440z"/>
+                                        </Viewbox>
+                                        <TextBlock Text="Install" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource FlatButton}"
+                                        Padding="14,6" Click="UninstallDriver_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Viewbox Width="14" Height="14" Margin="0,0,8,0">
+                                            <Path Fill="White"
+                                                  Data="M263.1 48L377 48C390.8 48 403 56.8 407.4 69.9L416 96L512 96C529.7 96 544 110.3 544 128C544 145.7 529.7 160 512 160L128 160C110.3 160 96 145.7 96 128C96 110.3 110.3 96 128 96L224 96L232.7 69.9C237.1 56.8 249.3 48 263.1 48zM128 208L512 208L490.9 531.1C489.3 556.4 468.3 576 443 576L197 576C171.7 576 150.7 556.4 149.1 531.1L128 208zM337 287C327.6 277.6 312.4 277.6 303.1 287L231.1 359C221.7 368.4 221.7 383.6 231.1 392.9C240.5 402.2 255.7 402.3 265 392.9L296 361.9L296 464C296 477.3 306.7 488 320 488C333.3 488 344 477.3 344 464L344 361.9L375 392.9C384.4 402.3 399.6 402.3 408.9 392.9C418.2 383.5 418.3 368.3 408.9 359L336.9 287z"/>
+                                        </Viewbox>
+                                        <TextBlock Text="Uninstall" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
 
@@ -60,28 +160,105 @@
                        FontSize="12" Margin="2,2,0,0"/>
         </StackPanel>
 
-        <!-- Right: filters + driver + preview -->
+        <!-- Right: mode + apply-to + exclusion list + settings + driver -->
         <Border Grid.Column="1" BorderBrush="Gray" BorderThickness="1"
                 Background="#3C3C3C" Padding="10">
             <StackPanel>
-                <TextBlock Text="Filters" FontWeight="Bold" FontSize="14"
-                           Foreground="White" Margin="0,0,0,10"/>
+                <TextBlock Text="Mode" Style="{StaticResource SectionHeader}"/>
+                <WrapPanel Margin="0,-5,0,10">
+                    <RadioButton Name="ModeBlurFaceRadio" Style="{StaticResource IconToggle}"
+                                 GroupName="PersonMode" IsChecked="True" Checked="PersonMode_Changed">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                      Data="M528 320C528 205.1 434.9 112 320 112C205.1 112 112 205.1 112 320C112 434.9 205.1 528 320 528C434.9 528 528 434.9 528 320zM64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576C178.6 576 64 461.4 64 320zM182.3 378.2C178.1 364.5 189.4 352 203.7 352L436.3 352C450.6 352 461.9 364.5 457.7 378.2C439.7 437.1 384.8 480 320 480C255.2 480 200.3 437.1 182.3 378.2zM208 256C208 238.3 222.3 224 240 224C257.7 224 272 238.3 272 256C272 273.7 257.7 288 240 288C222.3 288 208 273.7 208 256zM400 224C417.7 224 432 238.3 432 256C432 273.7 417.7 288 400 288C382.3 288 368 273.7 368 256C368 238.3 382.3 224 400 224z"/>
+                            </Viewbox>
+                            <TextBlock Text="Blur Faces" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Name="ModeBlurPersonRadio" Style="{StaticResource IconToggle}"
+                                 GroupName="PersonMode" Checked="PersonMode_Changed">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                      Data="M320 144C350.9 144 376 118.9 376 88C376 57.1 350.9 32 320 32C289.1 32 264 57.1 264 88C264 118.9 289.1 144 320 144zM233.4 291.9L256 269.3L256 338.6C256 366.6 268.2 393.3 289.5 411.5L360.9 472.7C366.8 477.8 370.7 484.8 371.8 492.5L384.4 580.6C386.9 598.1 403.1 610.3 420.6 607.8C438.1 605.3 450.3 589.1 447.8 571.6L435.2 483.5C431.9 460.4 420.3 439.4 402.6 424.2L368.1 394.6L368.1 279.4L371.9 284.1C390.1 306.9 417.7 320.1 446.9 320.1L480.1 320.1C497.8 320.1 512.1 305.8 512.1 288.1C512.1 270.4 497.8 256.1 480.1 256.1L446.9 256.1C437.2 256.1 428 251.7 421.9 244.1L404 221.7C381 192.9 346.1 176.1 309.2 176.1C277 176.1 246.1 188.9 223.4 211.7L188.1 246.6C170.1 264.6 160 289 160 314.5L160 352C160 369.7 174.3 384 192 384C209.7 384 224 369.7 224 352L224 314.5C224 306 227.4 297.9 233.4 291.9zM245.8 471.3C244.3 476.5 241.5 481.3 237.7 485.1L169.4 553.4C156.9 565.9 156.9 586.2 169.4 598.7C181.9 611.2 202.2 611.2 214.7 598.7L283 530.4C294.5 518.9 302.9 504.6 307.4 488.9L309.6 481.3L263.6 441.9C261.1 439.7 258.6 437.5 256.2 435.1L245.8 471.3z"/>
+                            </Viewbox>
+                            <TextBlock Text="Blur People" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Name="ModeSmartFillRadio" Style="{StaticResource IconToggle}"
+                                 GroupName="PersonMode" Checked="PersonMode_Changed">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                      Data="M512.5 74.3L291.1 222C262 241.4 243.5 272.9 240.5 307.3C302.8 320.1 351.9 369.2 364.8 431.6C399.3 428.6 430.7 410.1 450.1 381L597.7 159.5C604.4 149.4 608 137.6 608 125.4C608 91.5 580.5 64 546.6 64C534.5 64 522.6 67.6 512.5 74.3zM320 464C320 402.1 269.9 352 208 352C146.1 352 96 402.1 96 464C96 467.9 96.2 471.8 96.6 475.6C98.4 493.1 86.4 512 68.8 512L64 512C46.3 512 32 526.3 32 544C32 561.7 46.3 576 64 576L208 576C269.9 576 320 525.9 320 464z"/>
+                            </Viewbox>
+                            <TextBlock Text="Smart Fill People" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                </WrapPanel>
 
-                <RadioButton Name="BlurAllRadio" Content="Blur all faces" Foreground="White"
-                             GroupName="FilterMode" Margin="0,0,0,5" Checked="FilterMode_Changed"/>
-                <RadioButton Name="BlurNotAllowedRadio" Content="Blur faces not in list:"
-                             Foreground="White" GroupName="FilterMode" IsChecked="True"
-                             Margin="0,0,0,8" Checked="FilterMode_Changed"/>
+                <TextBlock Text="Apply To" Style="{StaticResource SectionHeader}"/>
+                <WrapPanel Margin="0,-5,0,12">
+                    <RadioButton Name="BlurNotAllowedRadio" Style="{StaticResource IconToggle}"
+                                 GroupName="FilterMode" IsChecked="True" Checked="FilterMode_Changed">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                      Data="M470.5 463.6C451.4 416.9 405.5 384 352 384L288 384C234.5 384 188.6 416.9 169.5 463.6C133.9 426.3 112 375.7 112 320C112 205.1 205.1 112 320 112C434.9 112 528 205.1 528 320C528 375.7 506.1 426.2 470.5 463.6zM430.4 496.3C398.4 516.4 360.6 528 320 528C279.4 528 241.6 516.4 209.5 496.3C216.8 459.6 249.2 432 288 432L352 432C390.8 432 423.2 459.6 430.5 496.3zM320 576C461.4 576 576 461.4 576 320C576 178.6 461.4 64 320 64C178.6 64 64 178.6 64 320C64 461.4 178.6 576 320 576zM320 304C297.9 304 280 286.1 280 264C280 241.9 297.9 224 320 224C342.1 224 360 241.9 360 264C360 286.1 342.1 304 320 304zM232 264C232 312.6 271.4 352 320 352C368.6 352 408 312.6 408 264C408 215.4 368.6 176 320 176C271.4 176 232 215.4 232 264z"/>
+                            </Viewbox>
+                            <TextBlock Text="Not in Exclusion List" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Name="BlurAllRadio" Style="{StaticResource IconToggle}"
+                                 GroupName="FilterMode" Checked="FilterMode_Changed">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="15" Height="15" Margin="0,0,7,0">
+                                <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                      Data="M320 576C178.6 576 64 461.4 64 320C64 178.6 178.6 64 320 64C461.4 64 576 178.6 576 320C576 461.4 461.4 576 320 576zM320 112C205.1 112 112 205.1 112 320C112 434.9 205.1 528 320 528C434.9 528 528 434.9 528 320C528 205.1 434.9 112 320 112zM390.7 233.9C398.5 223.2 413.5 220.8 424.2 228.6C434.9 236.4 437.3 251.4 429.5 262.1L307.4 430.1C303.3 435.8 296.9 439.4 289.9 439.9C282.9 440.4 276 437.9 271.1 433L215.2 377.1C205.8 367.7 205.8 352.5 215.2 343.2C224.6 333.9 239.8 333.8 249.1 343.2L285.1 379.2L390.7 234z"/>
+                            </Viewbox>
+                            <TextBlock Text="All" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                </WrapPanel>
 
-                <TextBlock Text="Mode:" Foreground="White" FontSize="12" Margin="0,2,0,4"/>
-                <RadioButton Name="ModeBlurFaceRadio" Content="Blur Faces" Foreground="White"
-                             GroupName="PersonMode" IsChecked="True" Margin="0,0,0,3"
-                             Checked="PersonMode_Changed"/>
-                <RadioButton Name="ModeBlurPersonRadio" Content="Blur Person" Foreground="White"
-                             GroupName="PersonMode" Margin="0,0,0,3" Checked="PersonMode_Changed"/>
-                <RadioButton Name="ModeSmartFillRadio" Content="Smart Fill Person" Foreground="White"
-                             GroupName="PersonMode" Margin="0,0,0,8" Checked="PersonMode_Changed"/>
+                <TextBlock Text="Exclusion List" Style="{StaticResource SectionHeader}"/>
+                <ListBox ItemsSource="{Binding AllowedFaces}" Background="#4A4A4A"
+                         BorderBrush="Gray" MaxHeight="180" MinHeight="90" Margin="0,0,0,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Image Grid.Column="0" Width="40" Height="40"
+                                       Source="{Binding DisplayImage}" Margin="0,0,10,0"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="LightGray"/>
+                                </StackPanel>
+                                <Button Grid.Column="2" Content="⋯" Width="30" Height="25"
+                                        Click="FaceOptions_Click" Background="Transparent"
+                                        Foreground="White" BorderBrush="Gray"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
 
+                <Button Style="{StaticResource FlatButton}" Click="AddFace_Click"
+                        HorizontalAlignment="Left" Padding="12,6" Margin="0,0,0,12">
+                    <StackPanel Orientation="Horizontal">
+                        <Viewbox Width="14" Height="14" Margin="0,0,8,0">
+                            <Path Fill="White"
+                                  Data="M285.7 368C384.2 368 464 447.8 464 546.3C464 562.7 450.7 576 434.3 576L77.7 576C61.3 576 48 562.7 48 546.3C48 447.8 127.8 368 226.3 368L285.7 368zM528 144C541.3 144 552 154.7 552 168L552 216L600 216C613.3 216 624 226.7 624 240C624 253.3 613.3 264 600 264L552 264L552 312C552 325.3 541.3 336 528 336C514.7 336 504 325.3 504 312L504 264L456 264C442.7 264 432 253.3 432 240C432 226.7 442.7 216 456 216L504 216L504 168C504 154.7 514.7 144 528 144zM256 312C189.7 312 136 258.3 136 192C136 125.7 189.7 72 256 72C322.3 72 376 125.7 376 192C376 258.3 322.3 312 256 312z"/>
+                        </Viewbox>
+                        <TextBlock Text="Add Face" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Text="Settings" Style="{StaticResource SectionHeader}"/>
                 <Grid Name="BodySizePanel" Margin="0,0,0,8" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -133,34 +310,6 @@
                             ValueChanged="GhostSustainSlider_ValueChanged"/>
                 </Grid>
 
-                <ListBox ItemsSource="{Binding AllowedFaces}" Background="#4A4A4A"
-                         BorderBrush="Gray" MaxHeight="180" MinHeight="90" Margin="0,0,0,8">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="5">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Image Grid.Column="0" Width="40" Height="40"
-                                       Source="{Binding DisplayImage}" Margin="0,0,10,0"/>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Foreground="White"/>
-                                    <TextBlock Text="{Binding StatusText}" FontSize="10" Foreground="LightGray"/>
-                                </StackPanel>
-                                <Button Grid.Column="2" Content="⋯" Width="30" Height="25"
-                                        Click="FaceOptions_Click" Background="Transparent"
-                                        Foreground="White" BorderBrush="Gray"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <Button Content="+ Add Face" Padding="10,5" Click="AddFace_Click"
-                        Background="#5A5A5A" Foreground="White" BorderBrush="Gray"
-                        Margin="0,0,0,12"/>
-
                 <Grid Margin="0,0,0,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -191,15 +340,6 @@
                                TextAlignment="Center" VerticalAlignment="Center"/>
                     <Button Content="+" Width="26" Height="22" Click="SnapshotPlus_Click"
                             Background="#5A5A5A" Foreground="White" BorderBrush="Gray"/>
-                </StackPanel>
-
-                <TextBlock Text="Virtual Camera Driver" FontWeight="Bold" FontSize="13"
-                           Foreground="White" Margin="0,0,0,6"/>
-                <TextBlock Name="DriverStatusText" Text="Driver: unknown" Foreground="LightGray"
-                           FontSize="12" Margin="0,0,0,6" TextWrapping="Wrap"/>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Content="Install" Width="80" Margin="0,0,8,0" Click="InstallDriver_Click"/>
-                    <Button Content="Uninstall" Width="80" Click="UninstallDriver_Click"/>
                 </StackPanel>
             </StackPanel>
         </Border>
