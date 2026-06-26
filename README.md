@@ -46,13 +46,13 @@ The model file `face_detection_yunet_2023mar.onnx` (~230 KB) is bundled next to 
 
 ### Face recognition - why YuNet and SFace are complementary
 
-Detection alone can't tell *who* a face is. The IoU tracker gives faces stable ids only while they stay roughly put frame-to-frame; the moment a person leaves and returns, the detector blinks for too long, or a test video loops, they jump position and get a **brand-new id**. If "allowed" were keyed on that id, the person would silently start getting blurred again - and a new "New Face" would keep reappearing in the list. That's a recognition problem, not a detection one.
+Detection alone can't tell *who* a face is. The IoU tracker gives faces stable ids only while they stay roughly put frame-to-frame; the moment a person leaves and returns, the detector blinks for too long, or a test video loops, they jump position and get a **brand-new id**. If "allowed" were keyed on that id, the person would silently start getting blurred again - and a new "New Face" would keep reappearing in the list.
 
 **YuNet** (detect) and **SFace** (recognise) are a matched pair in the [OpenCV Zoo](https://github.com/opencv/opencv_zoo), designed to compose: YuNet emits 5 facial landmarks, and those landmarks are exactly what SFace needs to align a face before embedding it. So the same model that finds a face hands the recogniser everything it needs - no separate landmark step, no extra dependency (both run through the OpenCvSharp DNN module already in use).
 
 With SFace, "allow this person" stores their **embedding**, not a frame id. Each face is matched against the allowed embeddings by cosine similarity (cutoff `≥ 0.40` - a touch stricter than SFace's tuned 0.363, because a wrong match here un-blurs the wrong person), so allowing survives angle changes, brief disappearances, and re-entry. The cutoff errs toward blurring: a missed match re-blurs a known face (harmless), it never reveals an unknown one. The same embedding match also de-duplicates the GUI's face list, so one person stays one row instead of a new entry each time their track id resets. To keep that reliable the face is aligned to SFace's template with a deterministic closed-form similarity fit over YuNet's 5 landmarks - so the same face yields a stable embedding frame to frame.
 
-The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL the same way and is likewise required.
+The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL.
 
 ### Building
 
