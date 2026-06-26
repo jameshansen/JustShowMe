@@ -30,6 +30,8 @@ The project is a Visual Studio solution split into three components:
 2. **`justshowme_gui`** (C#/WPF) - the configuration GUI and the frame pump. While running it opens the configured real webcam, runs the filter on every frame, and pushes the result into the virtual camera. It shows a live **Before/After** preview inline and manages driver install/registration. The GUI must be running for filtering to happen.
 3. **`justshowme_filter`** (C# DLL) - the AI filter, `justshowme_filter.dll`, bundled beside the GUI exe. It does **any-angle face detection (YuNet)**, **face recognition (SFace)** so an allowed person stays allowed across angles and after leaving frame, cross-frame tracking, and per-person blur - or **smart-fill** erasure that replaces an unwanted person with recent background.
 
+When using **Add Face** the snapshots and embeddings are captured at that moment and used to exclude future appearances of the same face. The list is saved on exit to one file per face under `%ProgramData%\JustShowMe\facelist\` and restored on launch, so your allowed people persist across runs (removed faces are pruned).
+
 Settings are stored in `%ProgramData%\JustShowMe\settings.ini`.
 
 ### Face detection (the filter)
@@ -70,9 +72,7 @@ Each allowed person's region is a **safe zone**: their original pixels are snaps
 
 **How Smart Fill works:** the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
 
-### The Exclusion List - locked faces
 
-When you **Add Face**, the chosen person is *locked*: the snapshots and embeddings captured at that moment are frozen and never overwritten by later frames or similar-looking people, and the same person can't be added twice. The Edit dialog shows the locked frames. The list is saved on exit to one file per face under `%ProgramData%\JustShowMe\facelist\` and restored on launch, so your allowed people persist across runs (removed faces are pruned). Blur/erase decisions are made against those locked embeddings, so "allowed" stays stable even as the live video changes.
 
 ### Tuning (GUI sliders, all saved to the ini)
 
