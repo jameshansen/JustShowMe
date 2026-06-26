@@ -30,7 +30,7 @@ The project is a Visual Studio solution split into three components:
 2. **`justshowme_gui`** (C#/WPF) - the configuration GUI and the frame pump. While running it opens the configured real webcam, runs the filter on every frame, and pushes the result into the virtual camera. It shows a live **Before/After** preview inline and manages driver install/registration. The GUI must be running for filtering to happen.
 3. **`justshowme_filter`** (C# DLL) - the AI filter, `justshowme_filter.dll`, bundled beside the GUI exe. It does **any-angle face detection (YuNet)**, **face recognition (SFace)** so an allowed person stays allowed across angles and after leaving frame, cross-frame tracking, and per-person blur - or **smart-fill** erasure that replaces an unwanted person with recent background.
 
-Settings and the filter DLL path are stored in `%ProgramData%\JustShowMe\settings.ini` so every JustShowMe process reads the same config.
+Settings are stored in `%ProgramData%\JustShowMe\settings.ini`.
 
 ### Face detection (the filter)
 
