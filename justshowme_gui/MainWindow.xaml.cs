@@ -38,8 +38,9 @@ namespace JustShowMe
             BodySizeValueText.Text = _config.BodyScale.ToString("0.0");
             SmartFillSlider.Value = _config.SmartFillSeconds;     // fires ValueChanged (guarded)
             SmartFillValueText.Text = _config.SmartFillSeconds.ToString("0.0") + "s";
+            GhostSustainSlider.Value = _config.GhostSustainSeconds;   // fires ValueChanged (guarded)
+            GhostSustainValueText.Text = _config.GhostSustainSeconds.ToString("0.0") + "s";
             UpdateModeControls();
-            FilterDllText.Text = _config.FilterDllPath;
             FaceMatch.Threshold = _config.MatchThreshold;
             ThresholdSlider.Value = _config.MatchThreshold;   // fires ValueChanged (guarded)
             ThresholdValueText.Text = _config.MatchThreshold.ToString("0.00");
@@ -51,16 +52,13 @@ namespace JustShowMe
             RefreshDriverStatus();
         }
 
-        // Restore the allowed list saved at last shutdown. Each loaded face goes into
-        // both lists: AllowedFaces (so it's allowed and Start syncs its embeddings) and
-        // DetectedFaces (so when the person reappears they match this row, not a dupe).
+        // Restore the allowed list saved at last shutdown. These are locked, so they go
+        // only into AllowedFaces — never the live DetectedFaces list (UpdateFaceList
+        // recognises them by embedding and leaves them untouched).
         private void LoadSavedFaces()
         {
             foreach (var f in FaceStore.Load(Config.FaceListDir))
-            {
                 AllowedFaces.Add(f);
-                DetectedFaces.Add(f);
-            }
         }
 
         // ---- camera list ----
@@ -110,14 +108,14 @@ namespace JustShowMe
         {
             if (_selectedCamera < 0) { MessageBox.Show("No camera available."); return; }
 
-            Log.Write($"Start clicked: camera={_selectedCamera}, filterDll={_config.FilterDllPath}");
+            Log.Write($"Start clicked: camera={_selectedCamera}, filterDll={Config.DefaultFilterDll}");
 
             IFrameFilter filter;
-            try { filter = FilterHost.Load(_config.FilterDllPath); }
+            try { filter = FilterHost.Load(Config.DefaultFilterDll); }
             catch (Exception ex)
             {
                 Log.Write("FilterHost.Load", ex);
-                MessageBox.Show($"Could not load filter DLL:\n{_config.FilterDllPath}\n\n{ex.Message}");
+                MessageBox.Show($"Could not load filter DLL:\n{Config.DefaultFilterDll}\n\n{ex.Message}");
                 return;
             }
 
@@ -126,6 +124,7 @@ namespace JustShowMe
             _pump.Settings.PersonMode = _config.PersonMode;
             _pump.Settings.BodyScale = _config.BodyScale;
             _pump.Settings.SmartFillSeconds = _config.SmartFillSeconds;
+            _pump.Settings.GhostSustainFrames = (int)(_config.GhostSustainSeconds * _config.Fps);
             _pump.Settings.BlurStrength = _config.BlurStrength;
             SyncAllowedIds();
             _pump.FrameReady += OnFrameReady;
@@ -173,9 +172,16 @@ namespace JustShowMe
         {
             foreach (var f in faces)
             {
-                // Match to an existing row by identity (any of its snapshot embeddings)
-                // first, so a person who got a fresh tracker id (left frame, video
-                // looped) updates their row instead of spawning a new "New Face".
+                // Already a locked (allowed) face? Recognise them and leave their frozen
+                // snapshots/embedding completely alone — never refresh, never overwrite,
+                // and don't spawn a duplicate "New Face" row for them.
+                if (f.Embedding != null &&
+                    AllowedFaces.Any(a => a.Snapshots.Any(s => s.Embedding != null && FaceMatch.IsSame(s.Embedding, f.Embedding))))
+                    continue;
+
+                // Match to an existing transient row by identity (any of its snapshot
+                // embeddings) first, so a person who got a fresh tracker id (left frame,
+                // video looped) updates their row instead of spawning a new "New Face".
                 // Fall back to the id when there's no embedding yet.
                 var existing =
                     (f.Embedding != null
@@ -186,6 +192,10 @@ namespace JustShowMe
 
                 if (existing == null)
                 {
+                    // Only mint a row from a face actually seen this frame — never from a
+                    // ghost track coasting on persistence (its box is stale, so a thumbnail
+                    // there would be whatever the video now shows at that spot).
+                    if (!f.Seen) continue;
                     var nf = new DetectedFace
                     {
                         Id = f.Id, Name = "New Face",
@@ -198,14 +208,12 @@ namespace JustShowMe
                 {
                     existing.Id = f.Id;
                     existing.LastSeen = DateTime.Now;
-                    // Refresh the gallery at most ~once a second so the 5 snapshots
-                    // span recent time instead of being 5 near-identical frames.
-                    if (f.Embedding != null &&
-                        DateTime.Now - existing.LastSnapshot > TimeSpan.FromSeconds(1))
-                    {
+                    // Refresh the (still-unlocked) row's gallery at most ~twice a second
+                    // so its snapshots span recent time — but only from a face seen this
+                    // frame, so a stale ghost box can never overwrite it with background.
+                    if (f.Seen && f.Embedding != null &&
+                        DateTime.Now - existing.LastSnapshot > TimeSpan.FromSeconds(0.5))
                         existing.AddSnapshot(_pump?.GetThumbnail(f.Box), f.Embedding);
-                        if (AllowedFaces.Contains(existing)) SyncAllowedIds();
-                    }
                 }
             }
 
@@ -241,6 +249,10 @@ namespace JustShowMe
 
             var face = select.SelectedFace;
             face.IsExistingFace = false;
+            // Freeze the thumbnail now (at selection) so the Edit dialog — and later the
+            // allowed list — show this exact face, not whatever the live video updates
+            // FaceImage to as other faces come and go.
+            face.DisplayImage = face.FaceImage;
             var edit = new EditFaceDialog(face) { Owner = this };
             if (edit.ShowDialog() != true) return;
 
@@ -248,8 +260,10 @@ namespace JustShowMe
             else if (!AllowedFaces.Contains(face))
             {
                 face.IsExistingFace = true;
-                face.DisplayImage = face.FaceImage; // freeze the list thumbnail at add time
                 AllowedFaces.Add(face);
+                // Lock it: out of the live list, so its snapshots/embedding freeze at
+                // this moment and it can't be detected/added again or overwritten.
+                DetectedFaces.Remove(face);
             }
             SyncAllowedIds();
         }
@@ -352,6 +366,17 @@ namespace JustShowMe
             if (SmartFillValueText != null) SmartFillValueText.Text = e.NewValue.ToString("0.0") + "s";
         }
 
+        // How long a face keeps being tracked (and blurred/filled) after detection drops.
+        // Stored in seconds; the filter wants frames, so convert with the configured fps.
+        private void GhostSustainSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.GhostSustainSeconds = e.NewValue;
+            _config.Save();
+            if (_pump != null) _pump.Settings.GhostSustainFrames = (int)(e.NewValue * _config.Fps);
+            if (GhostSustainValueText != null) GhostSustainValueText.Text = e.NewValue.ToString("0.0") + "s";
+        }
+
         // ---- driver ----
         private void RefreshDriverStatus()
         {
@@ -381,23 +406,6 @@ namespace JustShowMe
             }
             catch (Exception ex) { MessageBox.Show(ex.Message); }
             RefreshDriverStatus();
-        }
-
-        // ---- filter dll selection ----
-        private void ChooseFilter_Click(object sender, RoutedEventArgs e)
-        {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Filter DLL (*.dll)|*.dll",
-                InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
-            };
-            if (dlg.ShowDialog() == true)
-            {
-                _config.FilterDllPath = dlg.FileName;
-                _config.Save();
-                FilterDllText.Text = dlg.FileName;
-                if (_pump != null && _pump.IsRunning) { Stop(); Start(); }
-            }
         }
 
         protected override void OnClosed(EventArgs e)

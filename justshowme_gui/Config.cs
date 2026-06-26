@@ -29,10 +29,10 @@ namespace JustShowMe
         public PersonMode PersonMode;
         public double BodyScale;
         public double SmartFillSeconds;
+        public double GhostSustainSeconds;
         public int BlurStrength;
         public double MatchThreshold;
         public int SnapshotCount;
-        public string FilterDllPath;
         public int Width, Height, Fps;
 
         private const string DefaultFilterName = "justshowme_filter.dll";
@@ -40,10 +40,6 @@ namespace JustShowMe
         /// The bundled filter, beside the *currently running* exe.
         public static string DefaultFilterDll =>
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DefaultFilterName);
-
-        /// True when the effective path is the bundled filter (not a user override).
-        public bool IsCustomFilterDll =>
-            !string.Equals(FilterDllPath, DefaultFilterDll, StringComparison.OrdinalIgnoreCase);
 
         public static Config Load()
         {
@@ -53,31 +49,17 @@ namespace JustShowMe
                 Mode = GetString("Filter", "Mode", "BlurNotAllowed") == "BlurAll"
                     ? FilterMode.BlurAll : FilterMode.BlurNotAllowed,
                 PersonMode = ParsePersonMode(GetString("Filter", "PersonMode", "BlurFace")),
-                BodyScale = GetDouble("Filter", "BodyScale", 2.5),
+                BodyScale = GetDouble("Filter", "BodyScale", 3.2),
                 SmartFillSeconds = GetDouble("Filter", "SmartFillSeconds", 1.0),
+                GhostSustainSeconds = GetDouble("Filter", "GhostSustainSeconds", 3.0),
                 BlurStrength = GetInt("Filter", "BlurStrength", 51),
                 MatchThreshold = GetDouble("Filter", "MatchThreshold", 0.40),
                 SnapshotCount = GetInt("Filter", "SnapshotCount", 5),
-                FilterDllPath = ResolveFilterDll(GetString("Filter", "DllPath", "")),
                 Width = GetInt("VirtualCam", "Width", 640),
                 Height = GetInt("VirtualCam", "Height", 480),
                 Fps = GetInt("VirtualCam", "Fps", 30),
             };
             return c;
-        }
-
-        // The default is always the bundled filter beside the current exe. A stored
-        // path is honoured only when it's a genuine custom filter (a different file
-        // name that exists). A stored "...\justshowme_filter.dll" — including the old
-        // auto-saved absolute default — resolves to the local one, so moving/rebuilding
-        // the app or running the release zip never loads a stale copy from elsewhere.
-        private static string ResolveFilterDll(string configured)
-        {
-            if (!string.IsNullOrWhiteSpace(configured) &&
-                !string.Equals(Path.GetFileName(configured), DefaultFilterName, StringComparison.OrdinalIgnoreCase) &&
-                File.Exists(configured))
-                return configured;
-            return DefaultFilterDll;
         }
 
         public void Save()
@@ -88,12 +70,10 @@ namespace JustShowMe
             Set("Filter", "PersonMode", PersonMode.ToString());
             Set("Filter", "BodyScale", BodyScale.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "SmartFillSeconds", SmartFillSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Set("Filter", "GhostSustainSeconds", GhostSustainSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "BlurStrength", BlurStrength.ToString());
             Set("Filter", "MatchThreshold", MatchThreshold.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "SnapshotCount", SnapshotCount.ToString());
-            // Only persist a custom override; the default stays empty so it always
-            // resolves to the filter beside whatever exe is running.
-            Set("Filter", "DllPath", IsCustomFilterDll ? FilterDllPath : "");
             Set("VirtualCam", "Width", Width.ToString());
             Set("VirtualCam", "Height", Height.ToString());
             Set("VirtualCam", "Fps", Fps.ToString());

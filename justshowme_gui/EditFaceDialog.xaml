@@ -19,12 +19,20 @@
             <TextBlock Grid.Row="0" Text="Edit Face" FontSize="16" FontWeight="Bold"
                        Foreground="White" Margin="0,0,0,15"/>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,20">
-                <Image Width="80" Height="80" Source="{Binding FaceImage}" Margin="0,0,20,0"/>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="Name:" Foreground="White" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Name}" Width="200" Padding="5"/>
-                </StackPanel>
+            <StackPanel Grid.Row="1" Margin="0,0,0,20">
+                <!-- The locked frames captured when this face was added. -->
+                <ItemsControl ItemsSource="{Binding Snapshots}" Margin="0,0,0,12">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Image Width="70" Height="70" Source="{Binding Image}" Margin="0,0,6,0"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Name:" Foreground="White" Margin="0,0,0,5"/>
+                <TextBox Text="{Binding Name}" Width="200" HorizontalAlignment="Left" Padding="5"/>
             </StackPanel>
 
             <TextBlock Grid.Row="2" Text="Notes:" Foreground="White" Margin="0,0,0,5"/>

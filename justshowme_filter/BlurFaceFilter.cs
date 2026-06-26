@@ -73,11 +73,13 @@ namespace JustShowMe.Filter
             if (smartFill) PushHistory(frame, now); else ClearHistory();
             Mat plate = smartFill ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
 
+            _tracker.MaxAge = Math.Max(0, settings.GhostSustainFrames);
+
             var toObscure = new List<Rect>();
             var safeZones = new List<Rect>();
             foreach (var track in _tracker.Update(boxes, embeddings))
             {
-                faces.Add(new DetectedFaceInfo { Id = track.Id, Box = track.Box, Embedding = track.Embedding });
+                faces.Add(new DetectedFaceInfo { Id = track.Id, Box = track.Box, Embedding = track.Embedding, Seen = track.Seen });
 
                 Rect region = settings.PersonMode == PersonMode.BlurFace
                     ? Pad(track.Box, frame.Size())
@@ -141,7 +143,7 @@ namespace JustShowMe.Filter
         {
             int w = (int)(face.Width * widthFactor);
             int x = face.X + face.Width / 2 - w / 2;
-            int top = face.Y - face.Height / 2;      // a little above the head
+            int top = face.Y - face.Height;          // a full face-height above the head
             if (x < 0) { w += x; x = 0; }
             if (top < 0) top = 0;
             if (x + w > bounds.Width) w = bounds.Width - x;

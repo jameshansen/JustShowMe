@@ -109,12 +109,17 @@ namespace JustShowMe
             lock (_lock)
             {
                 if (_lastRaw == null || _lastRaw.Empty()) return null;
-                var c = new Rect(
-                    Math.Max(0, box.X), Math.Max(0, box.Y),
-                    Math.Min(box.Width, _lastRaw.Width - box.X),
-                    Math.Min(box.Height, _lastRaw.Height - box.Y));
-                if (c.Width <= 0 || c.Height <= 0) return null;
-                using (var crop = new Mat(_lastRaw, c))
+                // Pad ~20% so the thumbnail isn't a tight crop, then clamp to the frame.
+                // (The old clamp shifted edge faces sideways — kept full width from x=0
+                // when box.X was negative — which showed only a corner of the face.)
+                int px = box.Width / 5, py = box.Height / 5;
+                int x = box.X - px, y = box.Y - py, w = box.Width + 2 * px, h = box.Height + 2 * py;
+                if (x < 0) { w += x; x = 0; }
+                if (y < 0) { h += y; y = 0; }
+                if (x + w > _lastRaw.Width) w = _lastRaw.Width - x;
+                if (y + h > _lastRaw.Height) h = _lastRaw.Height - y;
+                if (w <= 0 || h <= 0) return null;
+                using (var crop = new Mat(_lastRaw, new Rect(x, y, w, h)))
                 using (var small = new Mat())
                 {
                     Cv2.Resize(crop, small, new Size(64, 64));

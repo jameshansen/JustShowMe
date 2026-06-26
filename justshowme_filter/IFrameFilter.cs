@@ -27,8 +27,9 @@ namespace JustShowMe.Filter
     {
         public FilterMode Mode = FilterMode.BlurNotAllowed;
         public PersonMode PersonMode = PersonMode.BlurFace; // blur face / blur person / smart-fill person.
-        public double BodyScale = 2.5;                      // whole-person region width, in face widths.
+        public double BodyScale = 3.2;                      // whole-person region width, in face widths.
         public double SmartFillSeconds = 1.0;               // how far back to pull the background plate.
+        public int GhostSustainFrames = 90;                 // tracker persistence; GUI sets from seconds × fps.
         public int BlurStrength = 51;                       // Gaussian kernel size; forced odd by the filter.
 
         /// Face embeddings (from SFace) the user has allowed. A face is left clear
@@ -45,6 +46,9 @@ namespace JustShowMe.Filter
         public int Id;
         public Rect Box;
         public float[] Embedding;
+        /// True only when detected this frame (not coasting on tracker persistence).
+        /// The GUI uses this to avoid grabbing a thumbnail at a stale box position.
+        public bool Seen;
     }
 
     /// "Is this the same person?" by SFace embedding. Shared by the filter (blur

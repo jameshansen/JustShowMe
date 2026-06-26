@@ -95,7 +95,7 @@
                     <TextBlock Grid.Row="0" Grid.Column="1" Name="BodySizeValueText" Text="2.5"
                                Foreground="LightGray" FontSize="12"/>
                     <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="BodySizeSlider"
-                            Minimum="1.5" Maximum="4.0" SmallChange="0.1" LargeChange="0.5"
+                            Minimum="1.5" Maximum="10.0" SmallChange="0.1" LargeChange="0.5"
                             ValueChanged="BodySizeSlider_ValueChanged"/>
                 </Grid>
 
@@ -114,6 +114,23 @@
                     <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="SmartFillSlider"
                             Minimum="0.5" Maximum="5.0" SmallChange="0.5" LargeChange="1.0"
                             ValueChanged="SmartFillSlider_ValueChanged"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Match loss sustain time" Foreground="White" FontSize="12"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Name="GhostSustainValueText" Text="3.0s"
+                               Foreground="LightGray" FontSize="12"/>
+                    <Slider Grid.Row="1" Grid.ColumnSpan="2" Name="GhostSustainSlider"
+                            Minimum="0.0" Maximum="10.0" SmallChange="0.5" LargeChange="1.0"
+                            ValueChanged="GhostSustainSlider_ValueChanged"/>
                 </Grid>
 
                 <ListBox ItemsSource="{Binding AllowedFaces}" Background="#4A4A4A"
@@ -184,12 +201,6 @@
                     <Button Content="Install" Width="80" Margin="0,0,8,0" Click="InstallDriver_Click"/>
                     <Button Content="Uninstall" Width="80" Click="UninstallDriver_Click"/>
                 </StackPanel>
-
-                <TextBlock Text="Filter DLL:" Foreground="White" FontSize="11" Margin="0,12,0,2"/>
-                <TextBlock Name="FilterDllText" Foreground="LightGray" FontSize="10"
-                           TextWrapping="Wrap" Margin="0,0,0,4"/>
-                <Button Content="Choose filter DLL…" Padding="6,3" Click="ChooseFilter_Click"
-                        Background="#5A5A5A" Foreground="White" BorderBrush="Gray"/>
             </StackPanel>
         </Border>
     </Grid>
