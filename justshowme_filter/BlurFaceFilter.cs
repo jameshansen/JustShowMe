@@ -26,7 +26,10 @@ namespace JustShowMe.Filter
         private readonly FaceTracker _tracker = new FaceTracker();
 
         // Rolling background plate for Smart Fill: clean input frames, timestamped.
-        // ponytail: stores full frames only while Smart Fill is active; cleared otherwise.
+        // Recorded continuously (every mode), so switching INTO Smart Fill has a plate
+        // ready immediately instead of blurring until the buffer fills.
+        // ponytail: ~15fps store throttle keeps the ~6s buffer near ~80MB, not ~160MB.
+        private const long StoreIntervalMs = 66;   // ~15fps history granularity
         private readonly List<KeyValuePair<long, Mat>> _history = new List<KeyValuePair<long, Mat>>();
         private readonly Stopwatch _clock = Stopwatch.StartNew();
 
@@ -67,10 +70,11 @@ namespace JustShowMe.Filter
 
             bool smartFill = settings.PersonMode == PersonMode.SmartFill;
 
-            // The background plate is built only while Smart Fill is active. Push the
-            // current (still-clean) frame, then look back SmartFillSeconds for the plate.
+            // Record the current (still-clean) frame continuously, then — in Smart Fill —
+            // look back SmartFillSeconds for the plate. Recording in every mode means
+            // switching into Smart Fill takes effect instantly, no blur warm-up.
             long now = _clock.ElapsedMilliseconds;
-            if (smartFill) PushHistory(frame, now); else ClearHistory();
+            PushHistory(frame, now);
             Mat plate = smartFill ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
 
             _tracker.MaxAge = Math.Max(0, settings.GhostSustainFrames);
@@ -170,7 +174,9 @@ namespace JustShowMe.Filter
 
         private void PushHistory(Mat frame, long nowMs)
         {
-            _history.Add(new KeyValuePair<long, Mat>(nowMs, frame.Clone()));
+            // Throttle to ~15fps so the always-on buffer doesn't balloon in memory.
+            if (_history.Count == 0 || nowMs - _history[_history.Count - 1].Key >= StoreIntervalMs)
+                _history.Add(new KeyValuePair<long, Mat>(nowMs, frame.Clone()));
             long cutoff = nowMs - (long)(MaxHistorySeconds * 1000);
             int drop = 0;
             while (drop < _history.Count && _history[drop].Key < cutoff) { _history[drop].Value.Dispose(); drop++; }
