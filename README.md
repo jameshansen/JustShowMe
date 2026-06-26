@@ -137,7 +137,7 @@ The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recogniti
 
 [Font Awesome](https://fontawesome.com/) for the button SVG icons.
 
-The [stock](https://www.youtube.com/watch?v=WM9dkCgW3cM) [videos][(https://www.youtube.com/watch?v=WM9dkCgW3cM](https://www.youtube.com/watch?v=g0lMymp-FUc)) used in the demo video above.
+The [stock](https://www.youtube.com/watch?v=WM9dkCgW3cM) [videos](https://www.youtube.com/watch?v=g0lMymp-FUc) used in the demo video above.
 
 ## License
 
