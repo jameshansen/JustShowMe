@@ -18,6 +18,13 @@ While blurring the entire background is an option, this can sometimes create str
 
 "JustShowMe" provides the solution. Using face tracking, people are identified when they appear and either blurred or replaced with the background from previous video data, allowing you to show everyone your beautiful home decor, or cool coffee shop you happen to be at, without impacting individuals' privacy.
 
+New in Build 0011, **Virtual Background**:
+
+<img width="1014" height="753" alt="vb_demo" src="https://github.com/user-attachments/assets/ab6971ed-4636-4703-b18b-dce3526ea346" />
+
+
+Smart Fill and Blur:
+
 <img width="1000" height="643" alt="smartfill_demo" src="https://github.com/user-attachments/assets/32090fd0-1867-42f1-a10d-8e11542ff221" />
 
 <img width="1000" height="643" alt="blur_demo" src="https://github.com/user-attachments/assets/c1e4e314-e755-4804-a965-476a2b07f06a" />
