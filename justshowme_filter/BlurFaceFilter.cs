@@ -71,7 +71,29 @@ namespace JustShowMe.Filter
             var faces = new List<DetectedFaceInfo>();
             if (frame == null || frame.Empty()) return faces;
 
-            var detections = _detector.Detect(frame);
+            bool vbMode = settings.PersonMode == PersonMode.VirtualBackground;
+            bool smartFill = settings.PersonMode == PersonMode.SmartFill;
+            bool vbFill = smartFill && settings.SmartFillMode == SmartFillMode.VirtualBackground;
+
+            // Person segmentation FIRST — it drives the foreground/background split and
+            // decides where we run face detection. Computed when isolation is on (or a
+            // virtual-background fill wants it).
+            if ((settings.ForegroundMaskEnabled || vbFill || vbMode) && _vbm.Available) _vbm.UpdateMask(frame, settings.ForegroundPad);
+            else _vbm.ClearMask();
+
+            // Isolation splits the frame into a BACKGROUND plane that all the filters act on
+            // and a FOREGROUND plane (the live subject) composited back on top at the end.
+            // Snapshot the live subject source now, before anything mutates the frame.
+            bool isolate = settings.ForegroundMaskEnabled && _vbm.ForegroundMask != null;
+            Mat clean = isolate ? frame.Clone() : null;
+
+            // Face detection. When isolating, run it on the background cutout (the subject
+            // blacked out) so the webcam user is NEVER detected — only background people are,
+            // so the user can't be blurred or erased. Embeddings still come from the real
+            // frame (the detected faces are visible there).
+            Mat detectInput = isolate ? _vbm.BackgroundCutout(frame) : frame;
+            var detections = _detector.Detect(detectInput);
+            if (isolate) detectInput.Dispose();
             var boxes = new List<Rect>(detections.Count);
             var embeddings = new List<float[]>(detections.Count);
             foreach (var d in detections)
@@ -82,79 +104,84 @@ namespace JustShowMe.Filter
                 embeddings.Add(_recognizer.Embed(frame, d.Box, d.Landmarks));
             }
 
-            bool smartFill = settings.PersonMode == PersonMode.SmartFill;
-            bool vbFill = smartFill && settings.SmartFillMode == SmartFillMode.VirtualBackground;
-
-            // Person segmentation — drives the foreground/background split and the virtual
-            // background. Computed when isolation is on (or a virtual-background fill wants it).
-            if ((settings.ForegroundMaskEnabled || vbFill) && _vbm.Available) _vbm.UpdateMask(frame);
-            else _vbm.ClearMask();
-
-            // Isolation splits the frame into two planes: a BACKGROUND plane that all the
-            // filters (blur / smart fill) act on, and a FOREGROUND plane (the live subject)
-            // composited back on top at the very end. Snapshot the live subject source now,
-            // before anything mutates the frame.
-            bool isolate = settings.ForegroundMaskEnabled && _vbm.ForegroundMask != null;
-            Mat clean = isolate ? frame.Clone() : null;
-
-            // Record the current (still-clean) frame continuously, then — in Smart Fill —
-            // look back SmartFillSeconds for the rewind plate. Recording in every mode
-            // means switching into Smart Fill takes effect instantly, no blur warm-up.
+            // Rewind plate: only the Rewind submode needs the rolling clean-frame buffer, so
+            // record (and keep it in memory) only then; otherwise free it. ponytail: the
+            // always-on buffer wasted ~80MB in modes that never read it.
+            bool rewindMode = smartFill && settings.SmartFillMode == SmartFillMode.Rewind;
             long now = _clock.ElapsedMilliseconds;
-            PushHistory(frame, now);
-            Mat rewind = smartFill ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
+            if (rewindMode) PushHistory(frame, now);
+            else if (_history.Count > 0) ClearHistory();
+            Mat rewind = rewindMode ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
 
             _tracker.MaxAge = Math.Max(0, settings.GhostSustainFrames);
 
+            // Every tracked person here is a BACKGROUND person (the subject was masked out of
+            // detection). Their bodies are the exclusion/replacement array: kept out of the
+            // virtual background, and replaced by it in the output. Tracking persists them
+            // across dropped detections (GhostSustainFrames).
             var toObscure = new List<Rect>();
             var safeZones = new List<Rect>();
+            var people = new List<Rect>();
             foreach (var track in _tracker.Update(boxes, embeddings))
             {
                 faces.Add(new DetectedFaceInfo { Id = track.Id, Box = track.Box, Embedding = track.Embedding, Seen = track.Seen });
 
-                Rect region = settings.PersonMode == PersonMode.BlurFace
-                    ? Pad(track.Box, frame.Size())
-                    : BodyRegion(track.Box, frame.Size(), settings.BodyScale);
+                Rect body = BodyRegion(track.Box, frame.Size(), settings.BodyScale);
+                people.Add(body);
+
+                Rect region = settings.PersonMode == PersonMode.BlurFace ? Pad(track.Box, frame.Size()) : body;
                 bool obscure = settings.Mode == FilterMode.BlurAll
                                || !IsAllowed(track.Embedding, settings.AllowedEmbeddings);
                 (obscure ? toObscure : safeZones).Add(region);
             }
 
-            // Build the virtual background whenever isolation is on: it learns the real
-            // scene only where the segmented person isn't, so the person never bakes in.
-            if (isolate) _vbm.Update(frame);
+            // Build the virtual background whenever isolation is on: it learns the real scene
+            // only where there's no person — neither the segmented subject nor a detected
+            // background person — so nobody bakes in.
+            if (isolate) _vbm.Update(frame, people);
 
-            // Keep allowed people clear even when a neighbour's (larger) region overlaps
-            // them: snapshot their original pixels, obscure everyone else, then paint the
-            // snapshots back. ponytail: rectangles overlap imperfectly — a non-allowed
-            // person directly behind an allowed one shows through their safe zone. True
-            // per-pixel masks are the segmentation upgrade.
-            var saved = new List<KeyValuePair<Rect, Mat>>(safeZones.Count);
-            foreach (var r in safeZones)
-                if (r.Width > 0 && r.Height > 0)
-                    saved.Add(new KeyValuePair<Rect, Mat>(r, new Mat(frame, r).Clone()));
-
-            foreach (var r in toObscure)
+            if (vbMode)
             {
-                // Virtual Background: blur the region, then overlay the KNOWN background on
-                // top — so where we've learned the real background it shows through cleanly,
-                // and where we haven't yet the blur covers it (never a black hole). Rewind:
-                // copy from a recent frame. The subject is composited on top afterwards.
-                if (vbFill)
-                {
-                    BlurRegion(frame, r, settings.BlurStrength);
-                    _vbm.FillKnownBackground(frame, r);
-                }
-                else if (smartFill && rewind != null)
-                    FillFrom(rewind, frame, r);
-                else
-                    BlurRegion(frame, r, settings.BlurStrength);
+                // Virtual Background mode: no per-person work. Replace the whole background
+                // with the known virtual background (people-free); unrevealed areas keep the
+                // live frame. The subject is excluded from "known" so it isn't touched, and
+                // the live foreground is composited on top below.
+                if (isolate) _vbm.FillKnownBackground(frame, new Rect(0, 0, frame.Width, frame.Height));
             }
-
-            foreach (var kv in saved)
+            else
             {
-                using (var dst = new Mat(frame, kv.Key)) kv.Value.CopyTo(dst);
-                kv.Value.Dispose();
+                // Keep allowed people clear even when a neighbour's (larger) region overlaps
+                // them: snapshot their original pixels, obscure everyone else, then paint the
+                // snapshots back. ponytail: rectangles overlap imperfectly — a non-allowed
+                // person directly behind an allowed one shows through their safe zone. True
+                // per-pixel masks are the segmentation upgrade.
+                var saved = new List<KeyValuePair<Rect, Mat>>(safeZones.Count);
+                foreach (var r in safeZones)
+                    if (r.Width > 0 && r.Height > 0)
+                        saved.Add(new KeyValuePair<Rect, Mat>(r, new Mat(frame, r).Clone()));
+
+                foreach (var r in toObscure)
+                {
+                    // Virtual Background fill: blur the region, then overlay the KNOWN
+                    // background on top — where we've learned the real background it shows
+                    // through cleanly, where we haven't the blur covers it (never a black
+                    // hole). Rewind: copy from a recent frame. Subject composited on top after.
+                    if (vbFill)
+                    {
+                        BlurRegion(frame, r, settings.BlurStrength);
+                        _vbm.FillKnownBackground(frame, r);
+                    }
+                    else if (rewindMode && rewind != null)
+                        FillFrom(rewind, frame, r);
+                    else
+                        BlurRegion(frame, r, settings.BlurStrength);
+                }
+
+                foreach (var kv in saved)
+                {
+                    using (var dst = new Mat(frame, kv.Key)) kv.Value.CopyTo(dst);
+                    kv.Value.Dispose();
+                }
             }
 
             // Composite the live foreground subject back on top of the processed background

@@ -44,8 +44,9 @@ Earlier versions used a single Haar cascade, which only detects forward-facing f
 | `YuNetFaceDetector` | **The YuNet wrapper/decoder.** Loads `face_detection_yunet_2023mar.onnx` via OpenCV's DNN module and decodes its raw outputs, including the 5 facial landmarks. |
 | `SFaceRecognizer` | **The SFace wrapper.** Loads `face_recognition_sface_2021dec.onnx`, aligns each face from YuNet's landmarks, and turns it into a 128-D embedding so faces can be matched by identity. |
 | `FaceTracker` | Lightweight tracker giving stable face ids. Matches by IoU, then **falls back to SFace embedding** when boxes don't overlap (fast motion, edge jumps), so the same person keeps one track instead of leaving a trail of "ghost" regions. Keeps a face alive for a tunable window after detection drops (**Match loss sustain time**), so a turning head doesn't flash clear. |
-| `PersonSegmenter` | **PP-HumanSeg wrapper** (OpenCV Zoo). Loads `human_segmentation_pphumanseg_2023mar.onnx` through the same OpenCvSharp DNN module and returns a per-pixel **foreground mask** (white = person) — the "Zoom virtual background" style isolation. Optional: if the model isn't present the mask features just stay off. |
-| `BlurFaceFilter` | The `IFrameFilter`: detect → embed → track → obscure every person except those whose embedding matches an allowed one. **Mode** is selectable: blur the face, blur the whole person, or smart-fill (erase) the person with recent background. Also runs the optional foreground mask and maintains the background plate for Smart Fill's Background Mask mode. |
+| `PersonSegmenter` | **PP-HumanSeg wrapper** (OpenCV Zoo). Loads `human_segmentation_pphumanseg_2023mar.onnx` through the same OpenCvSharp DNN module and returns a per-pixel **foreground mask** (white = person), the "Zoom virtual background" style isolation. Optional: if the model isn't present the mask features just stay off. |
+| `VirtualBackgroundModel` | Owns the foreground/background split and the in-memory **virtual background**. Holds the `PersonSegmenter`, the current foreground mask, and the accumulated background plus a "known" mask recording which pixels have actually been revealed. Produces the background cutout used for detection, accumulates the people-free background, fills people regions from the known background, and composites the live foreground back on top with a feathered edge. |
+| `BlurFaceFilter` | The `IFrameFilter`: detect, embed, track, then obscure every person except those whose embedding matches an allowed one. **Mode** is selectable: blur the face, blur the whole person, or smart-fill (erase) the person. It orchestrates the per-frame pipeline and delegates all segmentation and virtual-background work to `VirtualBackgroundModel`. |
 
 **Why a hand-written YuNet decoder?** OpenCvSharp 4.11 doesn't ship the high-level `cv::FaceDetectorYN` wrapper, so `YuNetFaceDetector` reproduces its post-processing itself: per-stride priors (8/16/32), `score = sqrt(cls · obj)`, box decode, and non-max suppression. This keeps us on the OpenCvSharp DNN module we already have - no extra dependency. `SFaceRecognizer` does the same for the missing `cv::FaceRecognizerSF`: align-crop to the canonical 112×112 template, one forward pass, compare by cosine.
 
@@ -61,25 +62,36 @@ With SFace, "allow this person" stores their **embedding**, not a frame id. Each
 
 The model file `face_recognition_sface_2021dec.onnx` (~37 MB) is bundled next to the filter DLL.
 
-### Mode: blur face, blur person, or smart-fill
+### Mode: virtual background, smart-fill, blur person, or blur faces
 
-The GUI's **Mode** (saved to the ini) chooses what happens to each acted-on person:
+The GUI's **Mode** (saved to the ini) chooses what happens to the scene. The four options, in order:
 
+- **Virtual Background** (default) - no per-person work. The whole background is replaced by the in-memory virtual background (people-free), and the live foreground is composited on top. Areas the virtual background has not learned yet keep the live frame, never black. This is the cleanest Zoom-style result and requires the Foreground / Background Mask, so selecting it auto-enables that.
+- **Smart Fill People** - *erase* each background person: replace their whole-person region with recent background. A **Smart fill: go back** slider sets how far back (default 1 s) for the Rewind source. Designed for the "someone walks into shot" case.
+- **Blur People** - blur a whole-person region anchored on the face (~3 face-widths wide by default, from a face-height above the head down to the bottom of the frame). Since the face is the only part we can *identify*, the body is estimated from it rather than detected separately. It deliberately over-blurs a generous rectangle - for a privacy tool, covering too much is the safe error. A **Body zone size** slider scales it (up to 10 face-widths).
 - **Blur Faces** - blur the padded face box.
-- **Blur Person** - blur a whole-person region anchored on the face (~3 face-widths wide by default, from a face-height above the head down to the bottom of the frame). Since the face is the only part we can *identify*, the body is estimated from it rather than detected separately. It deliberately over-blurs a generous rectangle - for a privacy tool, covering too much is the safe error. A **Body zone size** slider scales it (up to 10 face-widths).
-- **Smart Fill Person** - *erase* the person: replace their whole-person region with the background from a few seconds ago. A **Smart fill: go back** slider sets how far back (default 1 s). Designed for the "someone walks into shot" case - a second ago that space was empty, so they vanish into the real background.
 
 Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect - a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
 
 **How Smart Fill works:** there are two modes (GUI toggle under **Settings** when Smart Fill is active):
 
 - **Rewind Replace** (default) - the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s) and copies the erased region from the buffered frame `go-back` seconds old. Good for "someone walks into shot." If the buffer isn't deep enough yet it falls back to blurring so no one is left exposed.
-- **Use Background Mask** - builds a persistent **background plate** using the foreground mask: wherever the segmenter says "not a person", the plate learns the live pixels (a masked running average); person pixels stay frozen at their last-known background. The plate fills in as the person moves out of the way, so it handles someone who stays put longer than the rewind buffer. A cheap downscaled frame-vs-plate difference detects when the **camera moves / scene changes** and rebuilds the plate so it never paints a stale background. Erasure is then per-pixel along the mask edge, not a rectangle. Selecting this mode auto-enables the foreground mask (it depends on it).
+- **Use Virtual Background** - replaces each background person with the in-memory virtual background (see **Smart Fill Virtual Background Pipeline** below). Where the real background behind them has already been seen it shows through cleanly; where it has not been seen yet it falls back to a blur, so no one is left exposed and no black is ever painted onto the output. Selecting this mode auto-enables the Virtual Background toggle (it depends on it).
 
 ### Foreground / Background Mask (person segmentation)
 
-A **Foreground / Background Mask** toggle (under the Exclusion List) runs **PP-HumanSeg** to isolate the person sitting in front of the camera, Zoom-virtual-background style. When enabled, a black-and-white mask preview appears under the **Before** image (white = where it thinks the person is). When Smart Fill's **Use Background Mask** mode is active, a second preview under the **After** image shows the current background plate held in memory.
+A **Foreground / Background Mask** toggle (under the Exclusion List) runs **PP-HumanSeg** to isolate the person sitting in front of the camera. It applies to every mode, not just Smart Fill: with the mask on, the filters (blur, smart fill) only ever touch the background, and the foreground (you) is never blurred or replaced. The same mask also builds the virtual background. While it is on, two previews appear: the **Foreground Mask** under the Before image (white = where it thinks the person is), and the **Virtual Background (in memory)** under the After image (the people-free background built up so far, transparent where nothing has been learned yet). The virtual background starts building as soon as the toggle is enabled, in any mode. A **Pad foreground** slider (default 0) dilates the mask by up to 40 px, growing the kept foreground a little so a tight cut-out includes a bit more around you.
 
+### Smart Fill Virtual Background Pipeline
+
+When the Virtual Background toggle is on, each frame is processed as two planes rather than one. This split is what lets Smart Fill replace background people without ever touching the webcam user.
+
+1. **Segment.** PP-HumanSeg splits the input into a foreground mask (the webcam user) and the background.
+2. **Detect on the background only.** Face detection runs on the *background cutout* (the frame with the foreground blacked out), so the webcam user is never detected and therefore can never be blurred or erased. Only background people are found. The tracker keeps them in memory across dropped detections, which gives the exclusion/replacement set.
+3. **Build the virtual background.** The background is learned wherever there is no person, that is, neither the segmented foreground nor any detected background person, so nobody bakes in. Pixels seen for the first time are stored at full value; already-known pixels are smoothed with a running average. A "known" mask records which pixels have really been revealed, so unseen areas stay transparent and never paint black. A background-only scene-change check rebuilds the model if the camera moves.
+4. **Compose the output.** Each background person is replaced by the known virtual background where it is available and blurred where it is not, then the live foreground is composited back on top with a feathered (soft) edge so the cut-out blends instead of showing a hard outline.
+
+In short: input, split into foreground and background, detect and replace people on the background plane only, then lay the live foreground back over the result.
 
 
 ### Tuning (GUI sliders, all saved to the ini)
@@ -88,9 +100,12 @@ A **Foreground / Background Mask** toggle (under the Exclusion List) runs **PP-H
 |---|---|
 | **Match strictness** | Cosine cutoff for "same person". Raise if different people get merged / the wrong face is kept clear; lower if an allowed face keeps re-blurring. |
 | **Match loss sustain time** | How long (seconds) a face stays tracked/blurred after detection drops. Lower to clear ghost regions faster; raise to hold through longer dropouts. |
-| **Body zone size** | Width of the whole-person region (Blur Person / Smart Fill), in face-widths, up to 10. |
+| **Pad foreground** | Dilates the foreground mask by up to 40 px so the kept foreground covers a little more around you. 0 = the raw segmentation mask. |
+| **Body zone size** | Width of the whole-person region (Blur People / Smart Fill), in face-widths, up to 10. |
 | **Smart fill: go back** | How many seconds of recent background to pull from when erasing a person. |
 | **Snapshots per face** | How many recent frames to keep (and lock) per identity. |
+
+A **16:9 / 4:3** button between the camera dropdown and Start toggles the capture aspect (default 16:9): the app requests a 16:9 capture mode from the webcam and falls back to 4:3 if none is available, and the virtual camera is sized to match so nothing is stretched.
 
 ### Building
 
@@ -129,8 +144,11 @@ This script:
 Native DLLs (`OpenCvSharpExtern.dll`, the ffmpeg DLL) can't be embedded, so they ship as files directly beside the exe.
 
 ## Future Improvement Plans
-* Per-pixel masking everywhere: the foreground mask is now used to erase along the person's silhouette in Smart Fill's Background Mask mode; the blur modes and the allowed-person "safe zones" still use rectangles and could use the mask too, removing the show-through where a hidden person stands directly behind an allowed one.
-* Temporal smoothing of the mask: PP-HumanSeg runs per frame independently; a light frame-to-frame blend would steady the mask edge.
+* Per-pixel masking everywhere: the allowed-person "safe zones" and the plain blur modes still use rectangles, where the Virtual Background pipeline already works per pixel. Bringing the mask to those paths would remove the show-through where a hidden person stands directly behind an allowed one.
+* Multiple foreground people: PP-HumanSeg segments any prominent person as foreground, so a second person standing close is kept rather than replaced. Separating "the subject up front" from other close people would need depth or per-blob logic.
+* Temporal smoothing of the mask: PP-HumanSeg runs per frame independently; a light frame-to-frame blend would steady the mask edge further.
+* Improved body area detection: the current approach uses a rectangle extended from the face down. A better algorithm could isolate the actual shape of the body, but it would have to be optimised to run on everyday PCs.
+* Improved temporal people tracking: track people's movement even when the face is lost, so coverage holds through turns and occlusions.
 
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 

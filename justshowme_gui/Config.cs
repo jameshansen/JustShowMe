@@ -29,6 +29,7 @@ namespace JustShowMe
         public PersonMode PersonMode;
         public SmartFillMode SmartFillMode;
         public bool ForegroundMaskEnabled;
+        public int ForegroundPad;
         public double BodyScale;
         public double SmartFillSeconds;
         public double GhostSustainSeconds;
@@ -36,6 +37,7 @@ namespace JustShowMe
         public double MatchThreshold;
         public int SnapshotCount;
         public int Width, Height, Fps;
+        public bool WideAspect;   // true = 16:9 capture, false = 4:3.
 
         private const string DefaultFilterName = "justshowme_filter.dll";
 
@@ -50,10 +52,11 @@ namespace JustShowMe
                 CameraIndex = GetInt("Camera", "Index", 0),
                 Mode = GetString("Filter", "Mode", "BlurNotAllowed") == "BlurAll"
                     ? FilterMode.BlurAll : FilterMode.BlurNotAllowed,
-                PersonMode = ParsePersonMode(GetString("Filter", "PersonMode", "BlurFace")),
+                PersonMode = ParsePersonMode(GetString("Filter", "PersonMode", "VirtualBackground")),
                 SmartFillMode = GetString("Filter", "SmartFillMode", "Rewind") == "VirtualBackground"
                     ? SmartFillMode.VirtualBackground : SmartFillMode.Rewind,
-                ForegroundMaskEnabled = GetString("Filter", "ForegroundMaskEnabled", "False") == "True",
+                ForegroundMaskEnabled = GetString("Filter", "ForegroundMaskEnabled", "True") == "True",
+                ForegroundPad = GetInt("Filter", "ForegroundPad", 0),
                 BodyScale = GetDouble("Filter", "BodyScale", 3.2),
                 SmartFillSeconds = GetDouble("Filter", "SmartFillSeconds", 1.0),
                 GhostSustainSeconds = GetDouble("Filter", "GhostSustainSeconds", 3.0),
@@ -63,6 +66,7 @@ namespace JustShowMe
                 Width = GetInt("VirtualCam", "Width", 640),
                 Height = GetInt("VirtualCam", "Height", 480),
                 Fps = GetInt("VirtualCam", "Fps", 30),
+                WideAspect = GetString("Camera", "WideAspect", "True") == "True",
             };
             return c;
         }
@@ -75,6 +79,7 @@ namespace JustShowMe
             Set("Filter", "PersonMode", PersonMode.ToString());
             Set("Filter", "SmartFillMode", SmartFillMode.ToString());
             Set("Filter", "ForegroundMaskEnabled", ForegroundMaskEnabled.ToString());
+            Set("Filter", "ForegroundPad", ForegroundPad.ToString());
             Set("Filter", "BodyScale", BodyScale.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "SmartFillSeconds", SmartFillSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "GhostSustainSeconds", GhostSustainSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -84,6 +89,7 @@ namespace JustShowMe
             Set("VirtualCam", "Width", Width.ToString());
             Set("VirtualCam", "Height", Height.ToString());
             Set("VirtualCam", "Fps", Fps.ToString());
+            Set("Camera", "WideAspect", WideAspect.ToString());
         }
 
         private static string GetString(string s, string k, string def)

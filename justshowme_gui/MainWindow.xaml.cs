@@ -31,15 +31,19 @@ namespace JustShowMe
             LoadWebcams();
             BlurAllRadio.IsChecked = _config.Mode == FilterMode.BlurAll;
             BlurNotAllowedRadio.IsChecked = _config.Mode == FilterMode.BlurNotAllowed;
+            ModeVirtualBgRadio.IsChecked = _config.PersonMode == PersonMode.VirtualBackground;
             ModeBlurFaceRadio.IsChecked = _config.PersonMode == PersonMode.BlurFace;
             ModeBlurPersonRadio.IsChecked = _config.PersonMode == PersonMode.BlurPerson;
             ModeSmartFillRadio.IsChecked = _config.PersonMode == PersonMode.SmartFill;
+            AspectButton.Content = _config.WideAspect ? "16:9" : "4:3";
             MaskEnabledRadio.IsChecked = _config.ForegroundMaskEnabled;
             MaskDisabledRadio.IsChecked = !_config.ForegroundMaskEnabled;
             SmartFillBgMaskRadio.IsChecked = _config.SmartFillMode == SmartFillMode.VirtualBackground;
             SmartFillRewindRadio.IsChecked = _config.SmartFillMode != SmartFillMode.VirtualBackground;
             BodySizeSlider.Value = _config.BodyScale;             // fires ValueChanged (guarded)
             BodySizeValueText.Text = _config.BodyScale.ToString("0.0");
+            PadForegroundSlider.Value = _config.ForegroundPad;    // fires ValueChanged (guarded)
+            PadForegroundValueText.Text = _config.ForegroundPad + " px";
             SmartFillSlider.Value = _config.SmartFillSeconds;     // fires ValueChanged (guarded)
             SmartFillValueText.Text = _config.SmartFillSeconds.ToString("0.0") + "s";
             GhostSustainSlider.Value = _config.GhostSustainSeconds;   // fires ValueChanged (guarded)
@@ -123,11 +127,12 @@ namespace JustShowMe
                 return;
             }
 
-            _pump = new Pump(filter, new VirtualWebcam(_config.Width, _config.Height, _config.Fps));
+            _pump = new Pump(filter);
             _pump.Settings.Mode = _config.Mode;
             _pump.Settings.PersonMode = _config.PersonMode;
             _pump.Settings.SmartFillMode = _config.SmartFillMode;
             _pump.Settings.ForegroundMaskEnabled = _config.ForegroundMaskEnabled;
+            _pump.Settings.ForegroundPad = _config.ForegroundPad;
             _pump.Settings.BodyScale = _config.BodyScale;
             _pump.Settings.SmartFillSeconds = _config.SmartFillSeconds;
             _pump.Settings.GhostSustainFrames = (int)(_config.GhostSustainSeconds * _config.Fps);
@@ -136,7 +141,7 @@ namespace JustShowMe
             _pump.FrameReady += OnFrameReady;
             _pump.FacesReady += OnFacesReady;
 
-            if (!_pump.Start(_selectedCamera, _config.Fps))
+            if (!_pump.Start(_selectedCamera, _config.Fps, _config.WideAspect))
             {
                 MessageBox.Show($"Could not open camera {_selectedCamera + 1}.");
                 _pump.Dispose(); _pump = null;
@@ -147,10 +152,15 @@ namespace JustShowMe
 
         private void Stop()
         {
+            // Disposing the pump disposes the filter, so the virtual background, masks, and
+            // frame history are wiped from memory. Clear every preview so nothing stays
+            // frozen on screen; a fresh filter is created on the next Start.
             _pump?.Dispose();
             _pump = null;
             BeforePreview.Source = null;
             AfterPreview.Source = null;
+            MaskPreview.Source = null;
+            PlatePreview.Source = null;
             UpdateRunningUI();
         }
 
@@ -167,6 +177,9 @@ namespace JustShowMe
         private void OnFrameReady(ImageSource before, ImageSource after, ImageSource mask, ImageSource plate) =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                // A frame can already be queued when Stop runs; ignore it so it doesn't
+                // repopulate (and freeze) the previews we just cleared.
+                if (_pump == null) return;
                 BeforePreview.Source = before;
                 AfterPreview.Source = after;
                 MaskPreview.Source = mask;
@@ -337,28 +350,43 @@ namespace JustShowMe
         {
             if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
             _config.PersonMode =
+                ModeVirtualBgRadio.IsChecked == true ? PersonMode.VirtualBackground :
                 ModeSmartFillRadio.IsChecked == true ? PersonMode.SmartFill :
                 ModeBlurPersonRadio.IsChecked == true ? PersonMode.BlurPerson : PersonMode.BlurFace;
+            // Virtual Background mode needs the mask; auto-enable it (mirrors Smart Fill's
+            // Virtual Background submode).
+            if (_config.PersonMode == PersonMode.VirtualBackground && MaskEnabledRadio.IsChecked != true)
+                MaskEnabledRadio.IsChecked = true;   // fires MaskMode_Changed (enables + saves)
             _config.Save();
             if (_pump != null) _pump.Settings.PersonMode = _config.PersonMode;
             UpdateModeControls();
+        }
+
+        // 16:9 / 4:3 capture toggle (between the camera dropdown and Start).
+        private void AspectToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _config.WideAspect = !_config.WideAspect;
+            AspectButton.Content = _config.WideAspect ? "16:9" : "4:3";
+            _config.Save();
+            if (_pump != null && _pump.IsRunning) { Stop(); Start(); }   // re-open at the new resolution
         }
 
         // Body-size slider applies to whole-person modes; smart-fill seconds only to
         // Smart Fill. Hide each where it has no effect.
         private void UpdateModeControls()
         {
-            bool person = _config.PersonMode != PersonMode.BlurFace;
+            bool body = _config.PersonMode == PersonMode.BlurPerson || _config.PersonMode == PersonMode.SmartFill;
             bool smartFill = _config.PersonMode == PersonMode.SmartFill;
             bool vbFill = smartFill && _config.SmartFillMode == SmartFillMode.VirtualBackground;
-            BodySizePanel.Visibility = person ? Visibility.Visible : Visibility.Collapsed;
+            BodySizePanel.Visibility = body ? Visibility.Visible : Visibility.Collapsed;
             SmartFillModePanel.Visibility = smartFill ? Visibility.Visible : Visibility.Collapsed;
             // "go back" seconds only matter to Rewind; Virtual Background has no rewind.
             SmartFillPanel.Visibility = (smartFill && !vbFill) ? Visibility.Visible : Visibility.Collapsed;
-            // Both previews track the mask toggle: the virtual background builds as soon as
-            // the mask is on, regardless of mode.
+            // Both previews and the pad slider track the mask toggle: the virtual background
+            // builds (and the mask can be padded) as soon as the mask is on, regardless of mode.
             MaskPreviewPanel.Visibility = _config.ForegroundMaskEnabled ? Visibility.Visible : Visibility.Collapsed;
             PlatePreviewPanel.Visibility = _config.ForegroundMaskEnabled ? Visibility.Visible : Visibility.Collapsed;
+            PadForegroundPanel.Visibility = _config.ForegroundMaskEnabled ? Visibility.Visible : Visibility.Collapsed;
         }
 
         // Virtual background (person segmentation) on or off.
@@ -388,6 +416,17 @@ namespace JustShowMe
             _config.Save();
             if (_pump != null) _pump.Settings.SmartFillMode = _config.SmartFillMode;
             UpdateModeControls();
+        }
+
+        // Grows the foreground mask area by N pixels (dilation), so the kept foreground
+        // covers a little more around the person. 0 = the raw segmentation mask.
+        private void PadForegroundSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.ForegroundPad = (int)e.NewValue;
+            _config.Save();
+            if (_pump != null) _pump.Settings.ForegroundPad = _config.ForegroundPad;
+            if (PadForegroundValueText != null) PadForegroundValueText.Text = _config.ForegroundPad + " px";
         }
 
         // Whole-person zone width (face widths). Sizes both the blur/fill and the safe zone.
@@ -464,5 +503,24 @@ namespace JustShowMe
             catch (Exception ex) { Log.Write("FaceStore.Save", ex); }
             base.OnClosed(e);
         }
+    }
+
+    /// Returns width * ratio, so a preview box can bind its Height to its own ActualWidth
+    /// and stay a fixed aspect ratio (16:9 = 0.5625) while growing with the window.
+    public sealed class AspectRatioConverter : System.Windows.Data.IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            double w = value is double d ? d : 0;
+            double ratio = 0.5625; // 9/16
+            if (parameter is string s &&
+                double.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double r))
+                ratio = r;
+            double h = w * ratio;
+            return double.IsNaN(h) || h < 0 ? 0.0 : h;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new NotSupportedException();
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using OpenCvSharp;
 
 namespace JustShowMe.Filter
@@ -15,6 +16,7 @@ namespace JustShowMe.Filter
     {
         private const double LearnRate = 0.1;            // how fast revealed background settles in.
         private const double SceneChangeThreshold = 30;  // mean abs grey diff (background only) ⇒ camera moved.
+        private const int FeatherKernel = 15;            // odd; softens the foreground cut-out edge.
 
         private readonly PersonSegmenter _segmenter;     // null if the seg model isn't present.
         private Mat _fgMask;     // 255 = person, this frame.
@@ -29,23 +31,41 @@ namespace JustShowMe.Filter
         public Mat Preview => _preview;
 
         /// Segment the frame into the foreground mask (255 = person). No-op if unavailable.
-        public void UpdateMask(Mat frame)
+        /// pad > 0 dilates the mask so the kept foreground area grows by that many pixels.
+        public void UpdateMask(Mat frame, int pad)
         {
             _fgMask?.Dispose();
             _fgMask = _segmenter?.Segment(frame);
+            if (_fgMask != null && pad > 0)
+                using (var k = Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(pad * 2 + 1, pad * 2 + 1)))
+                    Cv2.Dilate(_fgMask, _fgMask, k);
         }
 
         /// Drop the current mask (when isolation isn't wanted this frame).
         public void ClearMask() { _fgMask?.Dispose(); _fgMask = null; }
 
-        /// Learn the background wherever the person isn't. Only the background cutout is
+        /// A copy of the frame with the foreground subject blacked out, so face detection
+        /// only ever sees the background — the webcam user is never detected. Caller disposes.
+        public Mat BackgroundCutout(Mat frame)
+        {
+            var cut = frame.Clone();
+            if (_fgMask != null) cut.SetTo(Scalar.All(0), _fgMask);
+            return cut;
+        }
+
+        /// Learn the background wherever there's no person: not the segmented subject, and
+        /// not any detected background person (so they never bake in). Only that cutout is
         /// ever read; newly-revealed pixels become "known". Resets on a scene change.
-        public void Update(Mat frame)
+        public void Update(Mat frame, IReadOnlyList<Rect> people)
         {
             if (_fgMask == null) return;
             using (var bg = new Mat())   // 255 = background cutout (no person)
             {
                 Cv2.BitwiseNot(_fgMask, bg);
+                if (people != null)
+                    foreach (var r in people)
+                        if (r.Width > 0 && r.Height > 0)
+                            Cv2.Rectangle(bg, r, Scalar.All(0), -1);   // -1 = filled
                 bool reset = _bg == null || _bg.Size() != frame.Size() || SceneChanged(frame, bg);
                 if (reset)
                 {
@@ -57,10 +77,20 @@ namespace JustShowMe.Filter
                 }
                 else
                 {
+                    // Freshly-revealed background (visible now, not yet known) must be SEEDED
+                    // at full value — blending it up from black would copy near-black to the
+                    // output for many frames. Only already-known background gets smoothed.
                     using (var blended = new Mat())
+                    using (var knownNow = new Mat())   // bg AND known: smooth it
+                    using (var fresh = new Mat())      // bg AND NOT known: seed at full value
                     {
+                        Cv2.BitwiseAnd(bg, _known, knownNow);
+                        Cv2.BitwiseNot(_known, fresh);
+                        Cv2.BitwiseAnd(fresh, bg, fresh);
+
                         Cv2.AddWeighted(_bg, 1.0 - LearnRate, frame, LearnRate, 0, blended);
-                        blended.CopyTo(_bg, bg);
+                        blended.CopyTo(_bg, knownNow);
+                        frame.CopyTo(_bg, fresh);
                         Cv2.BitwiseOr(_known, bg, _known);   // once revealed, stays known
                     }
                 }
@@ -69,10 +99,34 @@ namespace JustShowMe.Filter
         }
 
         /// Paint the live subject (from a clean snapshot of the input) back over the
-        /// processed frame, so the foreground is never blurred, erased, or frozen.
+        /// processed frame, so the foreground is never blurred, erased, or frozen. The mask
+        /// edge is feathered (soft alpha) so the cut-out blends instead of showing a hard,
+        /// jagged outline: out = frame*(1-a) + clean*a, with a = blurred mask in [0,1].
         public void CompositeForeground(Mat clean, Mat frame)
         {
-            if (_fgMask != null) clean.CopyTo(frame, _fgMask);
+            if (_fgMask == null) return;
+            using (var alpha = new Mat())
+            using (var inv = new Mat())
+            using (var af = new Mat())
+            using (var invf = new Mat())
+            using (var cf = new Mat())
+            using (var ff = new Mat())
+            {
+                Cv2.GaussianBlur(_fgMask, alpha, new Size(FeatherKernel, FeatherKernel), 0);
+                Cv2.BitwiseNot(alpha, inv);                               // 255 - alpha, so af + invf = 1
+
+                Cv2.CvtColor(alpha, af, ColorConversionCodes.GRAY2BGR);
+                Cv2.CvtColor(inv, invf, ColorConversionCodes.GRAY2BGR);
+                af.ConvertTo(af, MatType.CV_32FC3, 1.0 / 255.0);
+                invf.ConvertTo(invf, MatType.CV_32FC3, 1.0 / 255.0);
+                clean.ConvertTo(cf, MatType.CV_32FC3);
+                frame.ConvertTo(ff, MatType.CV_32FC3);
+
+                Cv2.Multiply(cf, af, cf);
+                Cv2.Multiply(ff, invf, ff);
+                Cv2.Add(cf, ff, ff);
+                ff.ConvertTo(frame, frame.Type());
+            }
         }
 
         /// Overlay the KNOWN virtual background into region r. Unknown pixels are left

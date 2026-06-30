@@ -11,15 +11,18 @@ namespace JustShowMe.Filter
     }
 
     /// How to obscure each acted-on person:
-    ///   BlurFace   - blur just the face box.
-    ///   BlurPerson - blur the whole-body region (anchored on the face).
-    ///   SmartFill  - replace the whole-body region with the background from a few
-    ///                seconds ago, erasing the person (works as they enter the scene).
+    ///   VirtualBackground - no per-person work; replace the whole background with the
+    ///                       in-memory virtual background and keep the live foreground.
+    ///   BlurFace          - blur just the face box.
+    ///   BlurPerson        - blur the whole-body region (anchored on the face).
+    ///   SmartFill         - replace the whole-body region with recent background,
+    ///                       erasing the person (works as they enter the scene).
     public enum PersonMode
     {
         BlurFace,
         BlurPerson,
-        SmartFill
+        SmartFill,
+        VirtualBackground
     }
 
     /// How Smart Fill sources the pixels it paints over an erased person:
@@ -41,6 +44,7 @@ namespace JustShowMe.Filter
         public PersonMode PersonMode = PersonMode.BlurFace; // blur face / blur person / smart-fill person.
         public SmartFillMode SmartFillMode = SmartFillMode.Rewind; // how Smart Fill sources pixels.
         public bool ForegroundMaskEnabled = false;          // run person segmentation (Zoom-style mask).
+        public int ForegroundPad = 0;                       // dilate the foreground mask by this many px.
         public double BodyScale = 3.2;                      // whole-person region width, in face widths.
         public double SmartFillSeconds = 1.0;               // how far back to pull the rewind plate.
         public int GhostSustainFrames = 90;                 // tracker persistence; GUI sets from seconds × fps.

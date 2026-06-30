@@ -15,7 +15,7 @@ namespace JustShowMe
     public sealed class Pump : IDisposable
     {
         private readonly IFrameFilter _filter;
-        private readonly VirtualWebcam _vcam;
+        private VirtualWebcam _vcam;       // created in Start, sized to the actual capture.
         private VideoCapture _camera;
         private Timer _timer;
         private int _interval;
@@ -31,28 +31,53 @@ namespace JustShowMe
         public event Action<IReadOnlyList<DetectedFaceInfo>> FacesReady;
 
         public bool IsRunning { get; private set; }
-        public bool VirtualCamConnected => _vcam.IsConnected;
+        public bool VirtualCamConnected => _vcam != null && _vcam.IsConnected;
 
-        public Pump(IFrameFilter filter, VirtualWebcam vcam)
+        public Pump(IFrameFilter filter)
         {
             _filter = filter;
-            _vcam = vcam;
         }
 
-        public bool Start(int cameraIndex, int fps)
+        public bool Start(int cameraIndex, int fps, bool wide)
         {
             if (IsRunning) return true;
             _camera = new VideoCapture(cameraIndex, VideoCaptureAPIs.DSHOW);
             if (!_camera.IsOpened()) { _camera.Release(); _camera = null; return false; }
 
+            // Match the capture aspect to the chosen toggle, then size the virtual camera to
+            // whatever the camera actually gave us, so nothing is stretched downstream.
+            var (w, h) = ConfigureCapture(wide);
+            _vcam = new VirtualWebcam(w, h, fps);
             _vcam.Start(); // ok if driver missing; SendFrame is a no-op then
             IsRunning = true;
             _interval = Math.Max(1, 1000 / Math.Max(1, fps));
             // One-shot timer re-armed at the end of each Tick: never re-entrant, so
             // OpenCV native calls can't overlap (that would access-violate silently).
             _timer = new Timer(Tick, null, 0, Timeout.Infinite);
-            Log.Write($"Pump started: camera {cameraIndex}, {fps} fps, vcam active={_vcam.IsActive}");
+            Log.Write($"Pump started: camera {cameraIndex}, {fps} fps, {w}x{h}, vcam active={_vcam.IsActive}");
             return true;
+        }
+
+        // Ask the camera for a 16:9 capture mode (largest first) when wide, falling back to
+        // 4:3 if none take. Returns the resolution the camera actually settled on.
+        private (int, int) ConfigureCapture(bool wide)
+        {
+            if (wide)
+            {
+                foreach (var wh in new[] { (1280, 720), (1920, 1080), (960, 540), (640, 360) })
+                {
+                    _camera.Set(VideoCaptureProperties.FrameWidth, wh.Item1);
+                    _camera.Set(VideoCaptureProperties.FrameHeight, wh.Item2);
+                    int aw = (int)_camera.Get(VideoCaptureProperties.FrameWidth);
+                    int ah = (int)_camera.Get(VideoCaptureProperties.FrameHeight);
+                    if (ah > 0 && Math.Abs((double)aw / ah - 16.0 / 9.0) < 0.06) return (aw, ah);
+                }
+            }
+            _camera.Set(VideoCaptureProperties.FrameWidth, 640);
+            _camera.Set(VideoCaptureProperties.FrameHeight, 480);
+            int fw = (int)_camera.Get(VideoCaptureProperties.FrameWidth);
+            int fh = (int)_camera.Get(VideoCaptureProperties.FrameHeight);
+            return (fw > 0 ? fw : 640, fh > 0 ? fh : 480);
         }
 
         public void Stop()
@@ -60,7 +85,7 @@ namespace JustShowMe
             IsRunning = false;
             _timer?.Dispose(); _timer = null;
             _camera?.Release(); _camera = null;
-            _vcam.Stop();
+            _vcam?.Dispose(); _vcam = null;
             lock (_lock) { _lastRaw?.Dispose(); _lastRaw = null; }
         }
 
