@@ -15,6 +15,7 @@ namespace JustShowMe.Filter
     {
         private const string YuNetModel = "face_detection_yunet_2023mar.onnx";
         private const string SFaceModel = "face_recognition_sface_2021dec.onnx";
+        private const string SegModel = "human_segmentation_pphumanseg_2023mar.onnx";
         private const double PadFactor = 0.15;   // grow each face box 15% on every side
 
         // Cap on how far back the background history is kept (bounds memory; the GUI
@@ -23,7 +24,13 @@ namespace JustShowMe.Filter
 
         private readonly IFaceDetector _detector;
         private readonly SFaceRecognizer _recognizer;
+        private readonly VirtualBackgroundModel _vbm;  // segmentation + virtual background.
         private readonly FaceTracker _tracker = new FaceTracker();
+
+        // Foreground mask (255 = subject) and the virtual-background preview, surfaced for
+        // the GUI. Owned by the model; read on the pump thread right after Process.
+        public Mat ForegroundMask => _vbm.ForegroundMask;
+        public Mat VirtualBackground => _vbm.Preview;
 
         // Rolling background plate for Smart Fill: clean input frames, timestamped.
         // Recorded continuously (every mode), so switching INTO Smart Fill has a plate
@@ -41,6 +48,13 @@ namespace JustShowMe.Filter
             string dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
             _detector = new YuNetFaceDetector(RequireModel(dir, YuNetModel));
             _recognizer = new SFaceRecognizer(RequireModel(dir, SFaceModel));
+            // Segmentation is optional: if the model isn't bundled, the virtual-background
+            // feature just stays off (no hard failure).
+            PersonSegmenter segmenter = null;
+            string seg = Path.Combine(dir, SegModel);
+            try { if (File.Exists(seg)) segmenter = new PersonSegmenter(seg); }
+            catch (Exception ex) { Debug.WriteLine("PersonSegmenter load failed: " + ex.Message); }
+            _vbm = new VirtualBackgroundModel(segmenter);
         }
 
         private static string RequireModel(string dir, string name)
@@ -69,13 +83,26 @@ namespace JustShowMe.Filter
             }
 
             bool smartFill = settings.PersonMode == PersonMode.SmartFill;
+            bool vbFill = smartFill && settings.SmartFillMode == SmartFillMode.VirtualBackground;
+
+            // Person segmentation — drives the foreground/background split and the virtual
+            // background. Computed when isolation is on (or a virtual-background fill wants it).
+            if ((settings.ForegroundMaskEnabled || vbFill) && _vbm.Available) _vbm.UpdateMask(frame);
+            else _vbm.ClearMask();
+
+            // Isolation splits the frame into two planes: a BACKGROUND plane that all the
+            // filters (blur / smart fill) act on, and a FOREGROUND plane (the live subject)
+            // composited back on top at the very end. Snapshot the live subject source now,
+            // before anything mutates the frame.
+            bool isolate = settings.ForegroundMaskEnabled && _vbm.ForegroundMask != null;
+            Mat clean = isolate ? frame.Clone() : null;
 
             // Record the current (still-clean) frame continuously, then — in Smart Fill —
-            // look back SmartFillSeconds for the plate. Recording in every mode means
-            // switching into Smart Fill takes effect instantly, no blur warm-up.
+            // look back SmartFillSeconds for the rewind plate. Recording in every mode
+            // means switching into Smart Fill takes effect instantly, no blur warm-up.
             long now = _clock.ElapsedMilliseconds;
             PushHistory(frame, now);
-            Mat plate = smartFill ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
+            Mat rewind = smartFill ? GetHistoryFrame(now, settings.SmartFillSeconds) : null;
 
             _tracker.MaxAge = Math.Max(0, settings.GhostSustainFrames);
 
@@ -93,6 +120,10 @@ namespace JustShowMe.Filter
                 (obscure ? toObscure : safeZones).Add(region);
             }
 
+            // Build the virtual background whenever isolation is on: it learns the real
+            // scene only where the segmented person isn't, so the person never bakes in.
+            if (isolate) _vbm.Update(frame);
+
             // Keep allowed people clear even when a neighbour's (larger) region overlaps
             // them: snapshot their original pixels, obscure everyone else, then paint the
             // snapshots back. ponytail: rectangles overlap imperfectly — a non-allowed
@@ -105,10 +136,19 @@ namespace JustShowMe.Filter
 
             foreach (var r in toObscure)
             {
-                // Smart fill when we have an old-enough plate; otherwise blur (safe
-                // fallback while the buffer is still filling, so no one is left visible).
-                if (smartFill && plate != null) FillFrom(plate, frame, r);
-                else BlurRegion(frame, r, settings.BlurStrength);
+                // Virtual Background: blur the region, then overlay the KNOWN background on
+                // top — so where we've learned the real background it shows through cleanly,
+                // and where we haven't yet the blur covers it (never a black hole). Rewind:
+                // copy from a recent frame. The subject is composited on top afterwards.
+                if (vbFill)
+                {
+                    BlurRegion(frame, r, settings.BlurStrength);
+                    _vbm.FillKnownBackground(frame, r);
+                }
+                else if (smartFill && rewind != null)
+                    FillFrom(rewind, frame, r);
+                else
+                    BlurRegion(frame, r, settings.BlurStrength);
             }
 
             foreach (var kv in saved)
@@ -116,6 +156,15 @@ namespace JustShowMe.Filter
                 using (var dst = new Mat(frame, kv.Key)) kv.Value.CopyTo(dst);
                 kv.Value.Dispose();
             }
+
+            // Composite the live foreground subject back on top of the processed background
+            // plane, so they're never blurred, erased, or frozen.
+            if (isolate)
+            {
+                _vbm.CompositeForeground(clean, frame);
+                clean.Dispose();
+            }
+
             return faces;
         }
 
@@ -163,7 +212,7 @@ namespace JustShowMe.Filter
                 Cv2.GaussianBlur(region, region, new Size(k, k), 0);
         }
 
-        // Copy a region from the background plate over the current frame (the erase).
+        // Copy a region from the rewind plate over the current frame (the erase).
         private static void FillFrom(Mat plate, Mat frame, Rect r)
         {
             if (r.Width <= 0 || r.Height <= 0) return;
@@ -200,6 +249,12 @@ namespace JustShowMe.Filter
             return best;
         }
 
-        public void Dispose() { _detector?.Dispose(); _recognizer?.Dispose(); ClearHistory(); }
+        public void Dispose()
+        {
+            _detector?.Dispose();
+            _recognizer?.Dispose();
+            _vbm?.Dispose();
+            ClearHistory();
+        }
     }
 }

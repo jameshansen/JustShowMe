@@ -34,6 +34,10 @@ namespace JustShowMe
             ModeBlurFaceRadio.IsChecked = _config.PersonMode == PersonMode.BlurFace;
             ModeBlurPersonRadio.IsChecked = _config.PersonMode == PersonMode.BlurPerson;
             ModeSmartFillRadio.IsChecked = _config.PersonMode == PersonMode.SmartFill;
+            MaskEnabledRadio.IsChecked = _config.ForegroundMaskEnabled;
+            MaskDisabledRadio.IsChecked = !_config.ForegroundMaskEnabled;
+            SmartFillBgMaskRadio.IsChecked = _config.SmartFillMode == SmartFillMode.VirtualBackground;
+            SmartFillRewindRadio.IsChecked = _config.SmartFillMode != SmartFillMode.VirtualBackground;
             BodySizeSlider.Value = _config.BodyScale;             // fires ValueChanged (guarded)
             BodySizeValueText.Text = _config.BodyScale.ToString("0.0");
             SmartFillSlider.Value = _config.SmartFillSeconds;     // fires ValueChanged (guarded)
@@ -122,6 +126,8 @@ namespace JustShowMe
             _pump = new Pump(filter, new VirtualWebcam(_config.Width, _config.Height, _config.Fps));
             _pump.Settings.Mode = _config.Mode;
             _pump.Settings.PersonMode = _config.PersonMode;
+            _pump.Settings.SmartFillMode = _config.SmartFillMode;
+            _pump.Settings.ForegroundMaskEnabled = _config.ForegroundMaskEnabled;
             _pump.Settings.BodyScale = _config.BodyScale;
             _pump.Settings.SmartFillSeconds = _config.SmartFillSeconds;
             _pump.Settings.GhostSustainFrames = (int)(_config.GhostSustainSeconds * _config.Fps);
@@ -158,11 +164,13 @@ namespace JustShowMe
             StatusText.Text = running ? "Running" : "Stopped";
         }
 
-        private void OnFrameReady(ImageSource before, ImageSource after) =>
+        private void OnFrameReady(ImageSource before, ImageSource after, ImageSource mask, ImageSource plate) =>
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 BeforePreview.Source = before;
                 AfterPreview.Source = after;
+                MaskPreview.Source = mask;
+                PlatePreview.Source = plate;
             }));
 
         private void OnFacesReady(IReadOnlyList<DetectedFaceInfo> faces) =>
@@ -342,8 +350,44 @@ namespace JustShowMe
         {
             bool person = _config.PersonMode != PersonMode.BlurFace;
             bool smartFill = _config.PersonMode == PersonMode.SmartFill;
+            bool vbFill = smartFill && _config.SmartFillMode == SmartFillMode.VirtualBackground;
             BodySizePanel.Visibility = person ? Visibility.Visible : Visibility.Collapsed;
-            SmartFillPanel.Visibility = smartFill ? Visibility.Visible : Visibility.Collapsed;
+            SmartFillModePanel.Visibility = smartFill ? Visibility.Visible : Visibility.Collapsed;
+            // "go back" seconds only matter to Rewind; Virtual Background has no rewind.
+            SmartFillPanel.Visibility = (smartFill && !vbFill) ? Visibility.Visible : Visibility.Collapsed;
+            // Both previews track the mask toggle: the virtual background builds as soon as
+            // the mask is on, regardless of mode.
+            MaskPreviewPanel.Visibility = _config.ForegroundMaskEnabled ? Visibility.Visible : Visibility.Collapsed;
+            PlatePreviewPanel.Visibility = _config.ForegroundMaskEnabled ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Virtual background (person segmentation) on or off.
+        private void MaskMode_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.ForegroundMaskEnabled = MaskEnabledRadio.IsChecked == true;
+            // Virtual Background smart fill depends on the mask; if it's switched off, fall
+            // back to Rewind (fires SmartFillMode_Changed, which sets + saves the mode).
+            if (!_config.ForegroundMaskEnabled && _config.PersonMode == PersonMode.SmartFill
+                && _config.SmartFillMode == SmartFillMode.VirtualBackground)
+                SmartFillRewindRadio.IsChecked = true;
+            _config.Save();
+            if (_pump != null) _pump.Settings.ForegroundMaskEnabled = _config.ForegroundMaskEnabled;
+            UpdateModeControls();
+        }
+
+        // Smart fill source: Rewind vs Virtual Background. Virtual Background needs the
+        // mask, so picking it auto-enables that (mirrors the user's spec).
+        private void SmartFillMode_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_config == null) return; // fires during InitializeComponent, before ctor sets _config
+            _config.SmartFillMode = SmartFillBgMaskRadio.IsChecked == true
+                ? SmartFillMode.VirtualBackground : SmartFillMode.Rewind;
+            if (_config.SmartFillMode == SmartFillMode.VirtualBackground && MaskEnabledRadio.IsChecked != true)
+                MaskEnabledRadio.IsChecked = true;   // fires MaskMode_Changed (enables + saves)
+            _config.Save();
+            if (_pump != null) _pump.Settings.SmartFillMode = _config.SmartFillMode;
+            UpdateModeControls();
         }
 
         // Whole-person zone width (face widths). Sizes both the blur/fill and the safe zone.
@@ -380,9 +424,9 @@ namespace JustShowMe
         // ---- driver ----
         private void RefreshDriverStatus()
         {
-            string s = !DriverManager.IsInstalled ? "Driver: not found beside GUI"
-                : DriverManager.IsRegistered ? "Driver: installed and registered"
-                : "Driver: present but not registered";
+            string s = !DriverManager.IsInstalled ? "not found beside GUI"
+                : DriverManager.IsRegistered ? "Installed / Registered"
+                : "present but not registered";
             DriverStatusText.Text = s;
 
             // Blue "Install" prompts action when not registered; grey once installed.

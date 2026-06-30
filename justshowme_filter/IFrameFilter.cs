@@ -22,13 +22,27 @@ namespace JustShowMe.Filter
         SmartFill
     }
 
+    /// How Smart Fill sources the pixels it paints over an erased person:
+    ///   Rewind            - copy the region from a recent clean frame (the original
+    ///                       behaviour; works as someone walks into shot).
+    ///   VirtualBackground - copy from the accumulated virtual background built up (using
+    ///                       the mask + people tracking) from frames where no one was
+    ///                       there. Handles someone who stays put for a while.
+    public enum SmartFillMode
+    {
+        Rewind,
+        VirtualBackground
+    }
+
     /// Settings the GUI hands to the filter every frame.
     public sealed class FilterSettings
     {
         public FilterMode Mode = FilterMode.BlurNotAllowed;
         public PersonMode PersonMode = PersonMode.BlurFace; // blur face / blur person / smart-fill person.
+        public SmartFillMode SmartFillMode = SmartFillMode.Rewind; // how Smart Fill sources pixels.
+        public bool ForegroundMaskEnabled = false;          // run person segmentation (Zoom-style mask).
         public double BodyScale = 3.2;                      // whole-person region width, in face widths.
-        public double SmartFillSeconds = 1.0;               // how far back to pull the background plate.
+        public double SmartFillSeconds = 1.0;               // how far back to pull the rewind plate.
         public int GhostSustainFrames = 90;                 // tracker persistence; GUI sets from seconds × fps.
         public int BlurStrength = 51;                       // Gaussian kernel size; forced odd by the filter.
 
@@ -86,5 +100,11 @@ namespace JustShowMe.Filter
     {
         /// Processes the BGR frame in place. Returns the faces seen this frame.
         IReadOnlyList<DetectedFaceInfo> Process(Mat frame, FilterSettings settings);
+
+        /// Latest foreground (subject) mask and the in-memory virtual background, for the
+        /// GUI previews. Null unless their feature is active this frame. Read on the
+        /// pump thread right after Process; owned by the filter, don't dispose.
+        Mat ForegroundMask { get; }
+        Mat VirtualBackground { get; }
     }
 }

@@ -44,7 +44,8 @@ Earlier versions used a single Haar cascade, which only detects forward-facing f
 | `YuNetFaceDetector` | **The YuNet wrapper/decoder.** Loads `face_detection_yunet_2023mar.onnx` via OpenCV's DNN module and decodes its raw outputs, including the 5 facial landmarks. |
 | `SFaceRecognizer` | **The SFace wrapper.** Loads `face_recognition_sface_2021dec.onnx`, aligns each face from YuNet's landmarks, and turns it into a 128-D embedding so faces can be matched by identity. |
 | `FaceTracker` | Lightweight tracker giving stable face ids. Matches by IoU, then **falls back to SFace embedding** when boxes don't overlap (fast motion, edge jumps), so the same person keeps one track instead of leaving a trail of "ghost" regions. Keeps a face alive for a tunable window after detection drops (**Match loss sustain time**), so a turning head doesn't flash clear. |
-| `BlurFaceFilter` | The `IFrameFilter`: detect → embed → track → obscure every person except those whose embedding matches an allowed one. **Mode** is selectable: blur the face, blur the whole person, or smart-fill (erase) the person with recent background. |
+| `PersonSegmenter` | **PP-HumanSeg wrapper** (OpenCV Zoo). Loads `human_segmentation_pphumanseg_2023mar.onnx` through the same OpenCvSharp DNN module and returns a per-pixel **foreground mask** (white = person) — the "Zoom virtual background" style isolation. Optional: if the model isn't present the mask features just stay off. |
+| `BlurFaceFilter` | The `IFrameFilter`: detect → embed → track → obscure every person except those whose embedding matches an allowed one. **Mode** is selectable: blur the face, blur the whole person, or smart-fill (erase) the person with recent background. Also runs the optional foreground mask and maintains the background plate for Smart Fill's Background Mask mode. |
 
 **Why a hand-written YuNet decoder?** OpenCvSharp 4.11 doesn't ship the high-level `cv::FaceDetectorYN` wrapper, so `YuNetFaceDetector` reproduces its post-processing itself: per-stride priors (8/16/32), `score = sqrt(cls · obj)`, box decode, and non-max suppression. This keeps us on the OpenCvSharp DNN module we already have - no extra dependency. `SFaceRecognizer` does the same for the missing `cv::FaceRecognizerSF`: align-crop to the canonical 112×112 template, one forward pass, compare by cosine.
 
@@ -70,7 +71,14 @@ The GUI's **Mode** (saved to the ini) chooses what happens to each acted-on pers
 
 Each allowed person's region is a **safe zone**: their original pixels are snapshotted before the others are obscured and painted back afterwards, so a neighbour's larger rectangle can't bleed over and obscure someone you chose to keep visible. (With rectangles this is imperfect - a hidden person directly behind an allowed one can show through the safe zone; per-pixel masks would resolve it.)
 
-**How Smart Fill works:** the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s). To erase someone it copies their region from the buffered frame `go-back` seconds old. If the buffer isn't that deep yet (just switched on), it falls back to blurring so no one is left exposed.
+**How Smart Fill works:** there are two modes (GUI toggle under **Settings** when Smart Fill is active):
+
+- **Rewind Replace** (default) - the filter keeps a short rolling buffer of recent *clean* frames (full frames, up to ~6 s) and copies the erased region from the buffered frame `go-back` seconds old. Good for "someone walks into shot." If the buffer isn't deep enough yet it falls back to blurring so no one is left exposed.
+- **Use Background Mask** - builds a persistent **background plate** using the foreground mask: wherever the segmenter says "not a person", the plate learns the live pixels (a masked running average); person pixels stay frozen at their last-known background. The plate fills in as the person moves out of the way, so it handles someone who stays put longer than the rewind buffer. A cheap downscaled frame-vs-plate difference detects when the **camera moves / scene changes** and rebuilds the plate so it never paints a stale background. Erasure is then per-pixel along the mask edge, not a rectangle. Selecting this mode auto-enables the foreground mask (it depends on it).
+
+### Foreground / Background Mask (person segmentation)
+
+A **Foreground / Background Mask** toggle (under the Exclusion List) runs **PP-HumanSeg** to isolate the person sitting in front of the camera, Zoom-virtual-background style. When enabled, a black-and-white mask preview appears under the **Before** image (white = where it thinks the person is). When Smart Fill's **Use Background Mask** mode is active, a second preview under the **After** image shows the current background plate held in memory.
 
 
 
@@ -121,8 +129,8 @@ This script:
 Native DLLs (`OpenCvSharpExtern.dll`, the ffmpeg DLL) can't be embedded, so they ship as files directly beside the exe.
 
 ## Future Improvement Plans
-* Advanced Smart Fill Algorithm: The current approach of "rewinding" the video feed to replace an area doesn't handle people standing in one spot for more than a few seconds, we could better identify and update a "background plate" to be used for replacement
-* Improved Body Area detection: The current approach uses a rectangle exended from the face down, we could use a better algorithm to isolate the actual shape of the body, but this would have to be optimized for everyday PCs.
+* Per-pixel masking everywhere: the foreground mask is now used to erase along the person's silhouette in Smart Fill's Background Mask mode; the blur modes and the allowed-person "safe zones" still use rectangles and could use the mask too, removing the show-through where a hidden person stands directly behind an allowed one.
+* Temporal smoothing of the mask: PP-HumanSeg runs per frame independently; a light frame-to-frame blend would steady the mask edge.
 
 ## AI Ethics & Technology Policy (from the creator, James Hansen)
 
@@ -140,6 +148,8 @@ TheDigitalArtist at Pixabay for the [User Icon Graphic](https://pixabay.com/vect
 The [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) face-detection model (Shiqi Yu et al.), distributed via the OpenCV Zoo, used for any-angle face detection.
 
 The [SFace](https://github.com/opencv/opencv_zoo/tree/main/models/face_recognition_sface) face-recognition model (Yaoyao Zhong & Weihong Deng), distributed via the OpenCV Zoo, used to recognise allowed faces.
+
+The [PP-HumanSeg](https://github.com/opencv/opencv_zoo/tree/main/models/human_segmentation_pphumanseg) human-segmentation model (PaddlePaddle / Baidu), distributed via the OpenCV Zoo, used for the Zoom-style foreground/background mask.
 
 [Font Awesome](https://fontawesome.com/) for the button SVG icons.
 

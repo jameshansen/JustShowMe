@@ -25,8 +25,9 @@ namespace JustShowMe
         /// Mutated by the GUI as the user changes mode / allowed faces.
         public FilterSettings Settings { get; } = new FilterSettings();
 
-        /// Frozen, UI-thread-safe preview frames: (before = raw, after = filtered).
-        public event Action<ImageSource, ImageSource> FrameReady;
+        /// Frozen, UI-thread-safe preview frames: (before, after, foreground mask,
+        /// background plate). Mask/plate are null unless their feature is active.
+        public event Action<ImageSource, ImageSource, ImageSource, ImageSource> FrameReady;
         public event Action<IReadOnlyList<DetectedFaceInfo>> FacesReady;
 
         public bool IsRunning { get; private set; }
@@ -85,10 +86,19 @@ namespace JustShowMe
                     var after = frame.ToBitmapSource();
                     after.Freeze();
 
+                    // Optional preview panes. Read straight after Process (same thread,
+                    // before the filter reuses the Mats) and only convert when shown.
+                    ImageSource mask = null, plate = null;
+                    if (Settings.ForegroundMaskEnabled)
+                    {
+                        mask = Snapshot(_filter.ForegroundMask);
+                        plate = Snapshot(_filter.VirtualBackground);
+                    }
+
                     lock (_lock) { _lastRaw?.Dispose(); _lastRaw = raw.Clone(); } // unfiltered copy for thumbnails
                     frame.Dispose();
 
-                    FrameReady?.Invoke(before, after);
+                    FrameReady?.Invoke(before, after, mask, plate);
                     FacesReady?.Invoke(faces);
                 }
             }
@@ -101,6 +111,15 @@ namespace JustShowMe
                 // Re-arm for the next frame only after this one fully finished.
                 if (IsRunning) { try { _timer?.Change(_interval, Timeout.Infinite); } catch { } }
             }
+        }
+
+        // Frozen BitmapSource copy of a filter Mat (mask or plate), or null.
+        private static ImageSource Snapshot(Mat m)
+        {
+            if (m == null || m.Empty()) return null;
+            var bs = m.ToBitmapSource();
+            bs.Freeze();
+            return bs;
         }
 
         /// Crops a 64x64 thumbnail of a face from the last raw frame. UI-thread safe.

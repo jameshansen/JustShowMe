@@ -27,6 +27,8 @@ namespace JustShowMe
         public int CameraIndex;
         public FilterMode Mode;
         public PersonMode PersonMode;
+        public SmartFillMode SmartFillMode;
+        public bool ForegroundMaskEnabled;
         public double BodyScale;
         public double SmartFillSeconds;
         public double GhostSustainSeconds;
@@ -49,6 +51,9 @@ namespace JustShowMe
                 Mode = GetString("Filter", "Mode", "BlurNotAllowed") == "BlurAll"
                     ? FilterMode.BlurAll : FilterMode.BlurNotAllowed,
                 PersonMode = ParsePersonMode(GetString("Filter", "PersonMode", "BlurFace")),
+                SmartFillMode = GetString("Filter", "SmartFillMode", "Rewind") == "VirtualBackground"
+                    ? SmartFillMode.VirtualBackground : SmartFillMode.Rewind,
+                ForegroundMaskEnabled = GetString("Filter", "ForegroundMaskEnabled", "False") == "True",
                 BodyScale = GetDouble("Filter", "BodyScale", 3.2),
                 SmartFillSeconds = GetDouble("Filter", "SmartFillSeconds", 1.0),
                 GhostSustainSeconds = GetDouble("Filter", "GhostSustainSeconds", 3.0),
@@ -68,6 +73,8 @@ namespace JustShowMe
             Set("Camera", "Index", CameraIndex.ToString());
             Set("Filter", "Mode", Mode.ToString());
             Set("Filter", "PersonMode", PersonMode.ToString());
+            Set("Filter", "SmartFillMode", SmartFillMode.ToString());
+            Set("Filter", "ForegroundMaskEnabled", ForegroundMaskEnabled.ToString());
             Set("Filter", "BodyScale", BodyScale.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "SmartFillSeconds", SmartFillSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Set("Filter", "GhostSustainSeconds", GhostSustainSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
