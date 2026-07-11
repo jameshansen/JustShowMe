@@ -1,4 +1,17 @@
 # JustShowMe
+
+> [!IMPORTANT]
+> **JustShowMe is deprecated and no longer actively developed.** Its successor is
+> **[VeBeGe](https://github.com/jameshansen/VeBeGe)** — the same background-removal
+> idea, rebuilt to *just work*: no GUI and no "Add Face" button. VeBeGe runs as a
+> quiet background service and registers a virtual twin of every webcam, so you
+> just pick the **(VeBeGe)** camera in Zoom/Meet/Teams and anyone who isn't you is
+> removed automatically. **👉 [Get VeBeGe here](https://github.com/jameshansen/VeBeGe).**
+>
+> This repository stays up for reference and history — it's where the real-time
+> face detection, segmentation, and virtual-background pipeline behind VeBeGe was
+> first proven out.
+
 <img width="400" height="400" alt="justshowme_icon" src="https://github.com/user-attachments/assets/804d259a-3104-45b6-a55d-92b0370686e6" />
 
 **Download the latest version [here](https://github.com/jameshansen/JustShowMe/releases/latest).**
